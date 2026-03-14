@@ -1,5 +1,5 @@
 "use client";
-
+//complete code for sign-up page with supabase auth and form validation
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -94,7 +94,7 @@ export default function SignUpPage() {
                 <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="fullName"
-                  placeholder="John Doe"
+                  placeholder="shubham suthar"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   className="pl-9"

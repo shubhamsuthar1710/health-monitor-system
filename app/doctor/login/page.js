@@ -9,14 +9,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Heart, Loader2, Mail, Lock, Fingerprint, Stethoscope } from "lucide-react";
+import { Stethoscope, Loader2, Mail, Lock, Heart, ArrowLeft } from "lucide-react";
 
-export default function PatientLoginPage() {
-  const [loginMethod, setLoginMethod] = useState("email");
+export default function DoctorLoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [patientId, setPatientId] = useState("");
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   
@@ -29,15 +26,19 @@ export default function PatientLoginPage() {
       const { data: { session } } = await supabase.auth.getSession();
       
       if (session) {
-        // Check if user is a patient (not a doctor)
+        // Check if user is a doctor
         const { data: doctor } = await supabase
           .from('doctors')
-          .select('id')
+          .select('verification_status')
           .eq('user_id', session.user.id)
           .maybeSingle();
 
-        if (!doctor) {
-          router.push('/dashboard');
+        if (doctor) {
+          if (doctor.verification_status === 'verified') {
+            router.push('/doctor/dashboard');
+          } else {
+            router.push('/doctor/pending');
+          }
         }
       }
     };
@@ -51,46 +52,36 @@ export default function PatientLoginPage() {
     setIsLoading(true);
 
     try {
-      let loginEmail = email;
-
-      if (loginMethod === "patientId") {
-        // Find user by patient ID
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('email')
-          .eq('patient_id', patientId)
-          .maybeSingle();
-
-        if (profileError || !profile) {
-          throw new Error("Invalid Patient ID");
-        }
-        loginEmail = profile.email;
-      }
-
       // Attempt login
       const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: loginEmail,
+        email,
         password,
       });
 
       if (signInError) throw signInError;
 
-      // Verify this is a patient account
+      // Verify this is a doctor account
       const { data: { user } } = await supabase.auth.getUser();
-      const { data: doctor } = await supabase
+      const { data: doctor, error: doctorError } = await supabase
         .from('doctors')
-        .select('id')
+        .select('verification_status')
         .eq('user_id', user.id)
         .maybeSingle();
 
-      if (doctor) {
-        // This is a doctor - sign them out
+      if (doctorError || !doctor) {
+        // This is a patient - sign them out
         await supabase.auth.signOut();
-        throw new Error("Please use the doctor login portal");
+        throw new Error("This email is not registered as a doctor. Please use patient login.");
       }
 
-      router.push('/dashboard');
-      router.refresh();
+      // Redirect based on verification status
+      if (doctor.verification_status === 'verified') {
+        router.push('/doctor/dashboard');
+      } else if (doctor.verification_status === 'pending') {
+        router.push('/doctor/pending');
+      } else {
+        setError("Your account has been rejected. Please contact support.");
+      }
       
     } catch (error) {
       console.error("Login error:", error);
@@ -102,16 +93,24 @@ export default function PatientLoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
+      {/* Back to Home Button */}
+      <Link href="/" className="absolute top-4 left-4">
+        <Button variant="ghost" size="sm" className="gap-2">
+          <ArrowLeft className="h-4 w-4" />
+          Home
+        </Button>
+      </Link>
+
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
             <div className="p-3 rounded-full bg-primary/10">
-              <Heart className="h-8 w-8 text-primary" />
+              <Stethoscope className="h-8 w-8 text-primary" />
             </div>
           </div>
-          <CardTitle className="text-2xl font-bold">Patient Login</CardTitle>
+          <CardTitle className="text-2xl font-bold">Doctor Login</CardTitle>
           <CardDescription>
-            Sign in with your email or Patient ID
+            Secure access for healthcare providers
           </CardDescription>
         </CardHeader>
 
@@ -123,60 +122,22 @@ export default function PatientLoginPage() {
               </Alert>
             )}
 
-            <Tabs value={loginMethod} onValueChange={setLoginMethod} className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="email" className="gap-2">
-                  <Mail className="h-4 w-4" />
-                  Email
-                </TabsTrigger>
-                <TabsTrigger value="patientId" className="gap-2">
-                  <Fingerprint className="h-4 w-4" />
-                  Patient ID
-                </TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="email" className="space-y-4 mt-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="you@example.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="pl-9"
-                      required={loginMethod === "email"}
-                      disabled={isLoading}
-                    />
-                  </div>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="patientId" className="space-y-4 mt-4">
-                <div className="space-y-2">
-                  <Label htmlFor="patientId">Patient ID</Label>
-                  <div className="relative">
-                    <Fingerprint className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="patientId"
-                      placeholder="Enter 8-digit ID"
-                      value={patientId}
-                      onChange={(e) => setPatientId(e.target.value)}
-                      maxLength={8}
-                      pattern="\d{8}"
-                      className="pl-9 font-mono"
-                      required={loginMethod === "patientId"}
-                      disabled={isLoading}
-                    />
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Enter the 8-digit ID from your profile
-                  </p>
-                </div>
-              </TabsContent>
-            </Tabs>
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="doctor@hospital.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="pl-9"
+                  required
+                  disabled={isLoading}
+                />
+              </div>
+            </div>
 
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
@@ -209,9 +170,9 @@ export default function PatientLoginPage() {
 
           <div className="mt-6 space-y-4">
             <p className="text-center text-sm text-muted-foreground">
-              Don't have an account?{" "}
-              <Link href="/auth/sign-up" className="text-primary hover:underline font-medium">
-                Sign up as Patient
+              Don't have a doctor account?{" "}
+              <Link href="/doctor/signup" className="text-primary hover:underline font-medium">
+                Register as Doctor
               </Link>
             </p>
             
@@ -221,15 +182,15 @@ export default function PatientLoginPage() {
               </div>
               <div className="relative flex justify-center text-xs uppercase">
                 <span className="bg-background px-2 text-muted-foreground">
-                  Healthcare Provider?
+                  Patient?
                 </span>
               </div>
             </div>
             
             <Button variant="outline" className="w-full gap-2" asChild>
-              <Link href="/doctor/login">
-                <Stethoscope className="h-4 w-4" />
-                Go to Doctor Login
+              <Link href="/auth/login">
+                <Heart className="h-4 w-4" />
+                Go to Patient Login
               </Link>
             </Button>
           </div>

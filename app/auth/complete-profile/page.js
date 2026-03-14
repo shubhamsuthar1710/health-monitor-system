@@ -26,6 +26,7 @@ export default function CompleteProfilePage() {
   const [error, setError] = useState(null);
   const [userEmail, setUserEmail] = useState("");
   const [userName, setUserName] = useState("");
+  const [isProfileComplete, setIsProfileComplete] = useState(false);
   
   // Profile form state
   const [profileForm, setProfileForm] = useState({
@@ -52,15 +53,32 @@ export default function CompleteProfilePage() {
         return;
       }
       
-      // Check if profile already exists
+      // Check if profile already has required fields
       const { data: profile } = await supabase
         .from("profiles")
         .select("*")
         .eq("id", user.id)
         .single();
       
-      if (profile?.full_name) {
-        setUserName(profile.full_name);
+      if (profile) {
+        setUserName(profile.full_name || user.user_metadata?.full_name || "");
+        
+        // Check if profile is already complete (has required fields)
+        if (profile.date_of_birth || profile.blood_type || profile.phone) {
+          setIsProfileComplete(true);
+          // Pre-fill form with existing data
+          setProfileForm({
+            date_of_birth: profile.date_of_birth || "",
+            blood_type: profile.blood_type || "",
+            height_cm: profile.height_cm?.toString() || "",
+            weight_kg: profile.weight_kg?.toString() || "",
+            phone: profile.phone || "",
+          });
+          
+          if (profile.avatar_url) {
+            setAvatarPreview(profile.avatar_url);
+          }
+        }
       } else {
         setUserName(user.user_metadata?.full_name || "");
       }
@@ -71,6 +89,37 @@ export default function CompleteProfilePage() {
     
     checkUser();
   }, [router]);
+
+  // If profile is complete, show different UI
+  if (isProfileComplete) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <div className="flex justify-center mb-4">
+              <div className="p-3 rounded-full bg-green-100">
+                <Mail className="h-8 w-8 text-green-600" />
+              </div>
+            </div>
+            <CardTitle className="text-2xl font-bold">Email Verified!</CardTitle>
+            <CardDescription className="text-base mt-2">
+              Your email has been successfully verified.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Alert>
+              <AlertDescription>
+                Your profile is already complete. You can update it anytime from the dashboard.
+              </AlertDescription>
+            </Alert>
+            <Button onClick={() => router.push('/dashboard')} className="w-full">
+              Go to Dashboard
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   const handleAvatarSelect = (e) => {
     const file = e.target.files?.[0];
