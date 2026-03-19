@@ -1463,7 +1463,7 @@ export function ProfileContent({
                 </div>
 
                 {/* Weight */}
-                <div>
+                <div> 
                   <Label className="text-sm text-muted-foreground">Weight (kg)</Label>
                   {isEditMode ? (
                     <Input

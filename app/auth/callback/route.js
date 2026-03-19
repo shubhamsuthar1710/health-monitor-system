@@ -113,9 +113,9 @@ export async function GET(request) {
         .single()
 
       if (doctor) {
-        console.log('User is a doctor, redirecting to pending');
-        // Redirect to doctor pending page
-        return NextResponse.redirect(new URL('/doctor/pending', request.url))
+        console.log('User is a doctor, redirecting to dashboard');
+        // Since doctors are auto-verified, redirect directly to dashboard
+        return NextResponse.redirect(new URL('/doctor/dashboard', request.url))
       } else {
         console.log('User is a patient, redirecting to dashboard');
         // Redirect to patient dashboard

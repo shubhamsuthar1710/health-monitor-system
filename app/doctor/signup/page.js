@@ -19,7 +19,9 @@ import {
   Building2,
   MapPin,
   Calendar,
-  ArrowLeft
+  ArrowLeft,
+  Home,
+  CheckCircle2
 } from "lucide-react";
 
 export default function DoctorSignUpPage() {
@@ -121,6 +123,7 @@ export default function DoctorSignUpPage() {
       }
 
       // 2. Create doctor profile in doctors table
+      // Note: The database trigger will auto-set verification_status to 'verified'
       const { error: doctorError } = await supabase
         .from('doctors')
         .insert({
@@ -133,21 +136,29 @@ export default function DoctorSignUpPage() {
           license_expiry: formData.licenseExpiry || null,
           specialty: formData.specialty || null,
           hospital_affiliation: formData.hospitalAffiliation || null,
-          verification_status: 'pending'
+          // verification_status will be set by database trigger
         });
 
       if (doctorError) {
         console.error("Doctor profile error:", doctorError);
         
         // If doctor table doesn't exist, show setup error
+        // if (doctorError.code === '42P01') {
+        //   setError("Doctor registration system is being set up. Please try again in a few minutes.");
+        // } else {
+        //   setError("Failed to create doctor profile. Please contact support.");
+        // }
         if (doctorError.code === '42P01') {
-          setError("Doctor registration system is being set up. Please try again in a few minutes.");
-        } else {
-          setError("Failed to create doctor profile. Please contact support.");
-        }
-        
+    setError("Doctor registration system is being set up. Please try again in a few minutes.");
+  } else if (doctorError.code === '23505') {
+    setError("This doctor profile already exists. Please try logging in.");
+  } else if (doctorError.code === '42501') {
+    setError("Permission denied. Please check database permissions.");
+  } else {
+    setError("Failed to create doctor profile. Please try again.");
+  }
         // Clean up the auth user if doctor profile creation fails
-        await supabase.auth.admin.deleteUser(authData.user.id);
+        // await supabase.auth.admin.deleteUser(authData.user.id);
         return;
       }
 
@@ -170,42 +181,65 @@ export default function DoctorSignUpPage() {
   if (success) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        {/* Home Button */}
+        <Link href="/" className="absolute top-4 left-4 z-10">
+          <Button variant="outline" size="sm" className="gap-2">
+            <Home className="h-4 w-4" />
+            <span className="hidden sm:inline">Home</span>
+          </Button>
+        </Link>
+
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
               <div className="p-3 rounded-full bg-green-100">
                 <Mail className="h-8 w-8 text-green-600" />
               </div>
-              <div>
-              <Link href="/" className="absolute top-4 left-4 z-10">
-               <Button variant="outline" size="sm" className="gap-2">
-             <Home className="h-4 w-4" />
-               <span className="hidden sm:inline">Home</span>
-             </Button>
-           </Link>
-              </div>
             </div>
-            <CardTitle className="text-2xl font-bold">Check Your Email</CardTitle>
+            <CardTitle className="text-2xl font-bold">Verify Your Email</CardTitle>
             <CardDescription className="text-base mt-2">
               We've sent a verification link to <strong>{formData.email}</strong>
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="bg-muted p-4 rounded-lg text-sm">
-              <p className="font-medium mb-2">Next steps:</p>
-              <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
-                <li>Click the verification link in your email</li>
-                <li>Wait for admin approval (you'll receive another email)</li>
-                <li>Once verified, you can login and access patient records</li>
+          
+          <CardContent className="space-y-6">
+            {/* Updated Steps for Auto-Verification */}
+            <div className="bg-muted p-4 rounded-lg">
+              <h3 className="font-medium mb-3 flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-green-600" />
+                Quick Setup
+              </h3>
+              <ol className="space-y-3 text-sm">
+                <li className="flex items-start gap-2">
+                  <span className="bg-primary/10 text-primary rounded-full w-5 h-5 flex items-center justify-center text-xs flex-shrink-0 mt-0.5">1</span>
+                  <span>Click the verification link in your email</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="bg-primary/10 text-primary rounded-full w-5 h-5 flex items-center justify-center text-xs flex-shrink-0 mt-0.5">2</span>
+                  <span>After verification, you can <strong>login immediately</strong> - no admin approval needed</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="bg-primary/10 text-primary rounded-full w-5 h-5 flex items-center justify-center text-xs flex-shrink-0 mt-0.5">3</span>
+                  <span>Access your doctor dashboard and start using the system</span>
+                </li>
               </ol>
             </div>
-            <div className="flex flex-col gap-3">
-              <Button asChild variant="outline">
-                <Link href="/auth/login">
-                  Go to Login
+
+            {/* Important Note */}
+            <Alert className="bg-blue-50 border-blue-200">
+              <AlertDescription className="text-blue-700 text-sm">
+                <strong>Note:</strong> Your account is automatically verified after email confirmation. 
+                You won't need to wait for admin approval.
+              </AlertDescription>
+            </Alert>
+
+            <div className="flex flex-col gap-3 pt-2">
+              <Button asChild className="w-full">
+                <Link href="/doctor/login">
+                  Go to Doctor Login
                 </Link>
               </Button>
-              <Button asChild variant="ghost" size="sm">
+              <Button asChild variant="outline" className="w-full">
                 <Link href="/">
                   <ArrowLeft className="h-4 w-4 mr-2" />
                   Back to Home
@@ -219,23 +253,25 @@ export default function DoctorSignUpPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-2xl">
-        <CardHeader className="text-center">
-          <div className="flex justify-center mb-4">
-            <div className="p-3 rounded-full bg-primary/10">
-              <Stethoscope className="h-8 w-8 text-primary" />
-              <Link href="/" className="absolute top-4 left-4">
+    <div className="min-h-screen flex items-center justify-center bg-background p-4 relative">
+      {/* Home Button */}
+      <Link href="/" className="absolute top-4 left-4 z-10">
         <Button variant="ghost" size="sm" className="gap-2">
           <ArrowLeft className="h-4 w-4" />
           Home
         </Button>
       </Link>
+
+      <Card className="w-full max-w-2xl">
+        <CardHeader className="text-center">
+          <div className="flex justify-center mb-4">
+            <div className="p-3 rounded-full bg-primary/10">
+              <Stethoscope className="h-8 w-8 text-primary" />
             </div>
           </div>
           <CardTitle className="text-2xl font-bold">Doctor Registration</CardTitle>
           <CardDescription>
-            Register to access patient records. Your credentials will be verified by our team.
+            Register to access patient records. Your account will be automatically verified after email confirmation.
           </CardDescription>
         </CardHeader>
 
