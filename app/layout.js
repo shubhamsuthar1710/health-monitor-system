@@ -1,9 +1,10 @@
-import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { Geist, Geist_Mono } from 'next/font/google';
 import { Analytics } from '@vercel/analytics/next';
 import './globals.css';
-const _geist = Geist({ subsets: ["latin"] });
-const _geistMono = Geist_Mono({ subsets: ["latin"] });
+
+const geist = Geist({ subsets: ["latin"] });
+const geistMono = Geist_Mono({ subsets: ["latin"] });
+
 export const metadata = {
     title: 'HealthTrack - Personal Health Monitoring',
     description: 'Your comprehensive health monitoring system for tracking vitals, medications, and medical records.',
@@ -26,6 +27,14 @@ export const metadata = {
         apple: '/apple-icon.png',
     },
 };
-export default function RootLayout({ children, }) {
-    return (_jsx("html", { lang: "en", children: _jsxs("body", { className: `font-sans antialiased`, children: [children, _jsx(Analytics, {})] }) }));
+
+export default function RootLayout({ children }) {
+    return (
+        <html lang="en" suppressHydrationWarning>
+            <body className={`font-sans antialiased`} suppressHydrationWarning>
+                {children}
+                <Analytics />
+            </body>
+        </html>
+    );
 }

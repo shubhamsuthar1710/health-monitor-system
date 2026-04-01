@@ -46,7 +46,7 @@ export default function SignUpPage() {
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/complete-profile`,
+emailRedirectTo: `${window.location.origin}/auth/callback?next=/auth/complete-profile`,
           data: {
             full_name: fullName,
           },

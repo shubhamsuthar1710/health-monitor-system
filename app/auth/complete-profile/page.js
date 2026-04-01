@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useRef, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,9 +14,11 @@ import { Loader2, Calendar, Ruler, Weight, Camera, User, Mail } from "lucide-rea
 
 const bloodTypes = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
 
-export default function CompleteProfilePage() {
+// Main component wrapped in Suspense for useSearchParams
+function CompleteProfileContent() {
   const fileInputRef = useRef(null);
   const router = useRouter();
+  const searchParams = useSearchParams();
   
   const [avatarFile, setAvatarFile] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState(null);
@@ -27,6 +29,7 @@ export default function CompleteProfilePage() {
   const [userEmail, setUserEmail] = useState("");
   const [userName, setUserName] = useState("");
   const [isProfileComplete, setIsProfileComplete] = useState(false);
+
   
   // Profile form state
   const [profileForm, setProfileForm] = useState({
@@ -37,60 +40,97 @@ export default function CompleteProfilePage() {
     phone: "",
   });
 
-  // Check if user is authenticated and email is verified
+
+
+  // Load user profile after session is established
   useEffect(() => {
-    const checkUser = async () => {
+    let isMounted = true;
+    let retries = 0;
+    const maxRetries = 5;
+
+    const loadUserProfile = async () => {
       const supabase = getSupabaseBrowserClient();
-      const { data: { user } } = await supabase.auth.getUser();
       
-      if (!user) {
-        router.push("/auth/login");
-        return;
-      }
-      
-      if (!user.email_confirmed_at) {
-        router.push("/auth/check-email");
-        return;
-      }
-      
-      // Check if profile already has required fields
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", user.id)
-        .single();
-      
-      if (profile) {
-        setUserName(profile.full_name || user.user_metadata?.full_name || "");
-        
-        // Check if profile is already complete (has required fields)
-        if (profile.date_of_birth || profile.blood_type || profile.phone) {
-          setIsProfileComplete(true);
-          // Pre-fill form with existing data
-          setProfileForm({
-            date_of_birth: profile.date_of_birth || "",
-            blood_type: profile.blood_type || "",
-            height_cm: profile.height_cm?.toString() || "",
-            weight_kg: profile.weight_kg?.toString() || "",
-            phone: profile.phone || "",
-          });
+      while (retries < maxRetries && isMounted) {
+        try {
+          const { data: { user }, error } = await supabase.auth.getUser();
           
-          if (profile.avatar_url) {
-            setAvatarPreview(profile.avatar_url);
+          if (error || !user) {
+            retries++;
+            console.warn(`Session retry ${retries}/${maxRetries}`);
+            if (retries < maxRetries) {
+              await new Promise(r => setTimeout(r, 500));
+              continue;
+            }
+            if (isMounted) {
+              router.push("/auth/login");
+            }
+            return;
           }
+          
+          if (!user.email_confirmed_at) {
+            if (isMounted) {
+              router.push("/auth/check-email");
+            }
+            return;
+          }
+          
+          // Load profile data
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("*")
+            .eq("id", user.id)
+            .single();
+          
+          if (isMounted) {
+            setUserName(profile?.full_name || user.user_metadata?.full_name || "");
+            
+            if (profile) {
+              const hasProfileData = profile.date_of_birth || profile.blood_type || profile.phone;
+              
+              if (hasProfileData) {
+                setIsProfileComplete(true);
+                setProfileForm({
+                  date_of_birth: profile.date_of_birth || "",
+                  blood_type: profile.blood_type || "",
+                  height_cm: profile.height_cm?.toString() || "",
+                  weight_kg: profile.weight_kg?.toString() || "",
+                  phone: profile.phone || "",
+                });
+                
+                if (profile.avatar_url) {
+                  setAvatarPreview(profile.avatar_url);
+                }
+              }
+            }
+            
+            setUserEmail(user.email || "");
+            setIsLoading(false);
+          }
+          return;
+          
+        } catch (e) {
+          retries++;
+          if (retries >= maxRetries && isMounted) {
+            router.push("/auth/login");
+            return;
+          }
+          await new Promise(r => setTimeout(r, 500));
         }
-      } else {
-        setUserName(user.user_metadata?.full_name || "");
       }
-      
-      setUserEmail(user.email || "");
-      setIsLoading(false);
     };
-    
-    checkUser();
+
+    const timer = setTimeout(() => {
+      loadUserProfile();
+    }, 100);
+
+    return () => {
+      isMounted = false;
+      clearTimeout(timer);
+    };
   }, [router]);
 
-  // If profile is complete, show different UI
+  // If profile is complete, show completion UI
   if (isProfileComplete) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
@@ -101,9 +141,9 @@ export default function CompleteProfilePage() {
                 <Mail className="h-8 w-8 text-green-600" />
               </div>
             </div>
-            <CardTitle className="text-2xl font-bold">Email Verified!</CardTitle>
+            <CardTitle className="text-2xl font-bold">Profile Already Complete!</CardTitle>
             <CardDescription className="text-base mt-2">
-              Your email has been successfully verified.
+              Your profile has already been set up.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -296,7 +336,7 @@ export default function CompleteProfilePage() {
                   <Input
                     id="phone"
                     type="tel"
-                    placeholder="8866920701"
+                    placeholder="Enter 10-digit phone number"
                     value={profileForm.phone}
                     onChange={(e) => {
                       const value = e.target.value.replace(/\D/g, '').slice(0, 10);
@@ -387,5 +427,18 @@ export default function CompleteProfilePage() {
         </Card>
       </div>
     </div>
+  );
+}
+
+// Main export with Suspense wrapper
+export default function CompleteProfilePage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    }>
+      <CompleteProfileContent />
+    </Suspense>
   );
 }

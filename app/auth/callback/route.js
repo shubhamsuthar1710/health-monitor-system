@@ -117,9 +117,9 @@ export async function GET(request) {
         // Since doctors are auto-verified, redirect directly to dashboard
         return NextResponse.redirect(new URL('/doctor/dashboard', request.url))
       } else {
-        console.log('User is a patient, redirecting to dashboard');
-        // Redirect to patient dashboard
-        return NextResponse.redirect(new URL('/dashboard', request.url))
+        const nextParam = requestUrl.searchParams.get('next') || '/auth/complete-profile';
+        console.log('User is a patient, redirecting to:', nextParam);
+        return NextResponse.redirect(new URL(nextParam, request.url))
       }
     }
   } catch (error) {
