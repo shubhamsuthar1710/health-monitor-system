@@ -327,7 +327,10 @@ export default function VerifyPage() {
   const [status, setStatus] = useState('checking');
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
+  const [errorCode, setErrorCode] = useState('');
+  const [errorDescription, setErrorDescription] = useState('');
   const [countdown, setCountdown] = useState(0);
+  const [errorType, setErrorType] = useState('');
   const router = useRouter();
   const searchParams = useSearchParams();
   const supabase = getSupabaseBrowserClient();
@@ -335,6 +338,15 @@ export default function VerifyPage() {
   useEffect(() => {
     checkVerificationStatus();
   }, []);
+
+  // Auto-verify token if present in URL
+  const token = searchParams.get('token');
+  const typeParam = searchParams.get('type');
+  useEffect(() => {
+    if (token && typeParam) {
+      verifyToken(token, typeParam);
+    }
+  }, [token, typeParam]);
 
   useEffect(() => {
     if (countdown > 0) {
@@ -364,13 +376,29 @@ export default function VerifyPage() {
         return;
       }
 
-      const savedEmail = localStorage.getItem('pendingVerificationEmail');
-      if (savedEmail) setEmail(savedEmail);
-
+      // Parse all auth error params
       const errorParam = searchParams.get('error');
-      if (errorParam) setError(errorParam);
+      const errorCodeParam = searchParams.get('error_code');
+      const errorDescParam = searchParams.get('error_description');
+      const token = searchParams.get('token');
+      const type = searchParams.get('type');
 
-      setStatus('unverified');
+      const savedEmail = localStorage.getItem('pendingVerificationEmail');
+      if (savedEmail) {
+        setEmail(savedEmail);
+      }
+
+      if (errorCodeParam || errorParam) {
+        setErrorCode(errorCodeParam || errorParam);
+        setErrorDescription(errorDescParam || errorParam || 'Verification failed');
+        setErrorType(errorCodeParam === 'otp_expired' ? 'expired' : 'invalid');
+        setStatus(errorCodeParam === 'otp_expired' ? 'expired' : 'error');
+      } else if (token) {
+        // Direct token verification
+        setStatus('verifying_token');
+      } else {
+        setStatus('unverified');
+      }
       
     } catch (error) {
       console.error('Error checking status:', error);
@@ -443,6 +471,27 @@ export default function VerifyPage() {
     await checkVerificationStatus();
   };
 
+  const verifyToken = async (token, type) => {
+    try {
+      setStatus('verifying_token');
+      const { data, error } = await supabase.auth.verifyOtp({
+        token,
+        type: type === 'signup' ? 'signup' : 'email'
+      });
+
+      if (error) throw error;
+
+      if (data.user) {
+        setStatus('verified');
+        localStorage.removeItem('pendingVerificationEmail');
+      }
+    } catch (error) {
+      console.error('Token verification failed:', error);
+      setError(error.message || 'Invalid verification token');
+      setStatus('error');
+    }
+  };
+
   // Loading state
   if (status === 'checking') {
     return (
@@ -487,6 +536,62 @@ export default function VerifyPage() {
             <Button asChild className="w-full">
               <Link href="/dashboard">
                 Go to Dashboard Now
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Expired link state - special UX for otp_expired
+  if (status === 'expired') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <div className="flex justify-center mb-4">
+              <div className="p-3 rounded-full bg-orange-100">
+                <XCircle className="h-8 w-8 text-orange-600" />
+              </div>
+            </div>
+            <CardTitle className="text-2xl font-bold">Verification Link Expired</CardTitle>
+            <CardDescription className="text-base mt-2">
+              The link has expired. Request a new one to continue.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Alert variant="destructive">
+              <AlertDescription>{errorDescription}</AlertDescription>
+            </Alert>
+            
+            <div className="space-y-2">
+              <Label htmlFor="email">Your Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="Enter your email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+
+            <Button 
+              onClick={resendVerification} 
+              className="w-full gap-2"
+              disabled={!email || countdown > 0}
+            >
+              {countdown > 0 ? `Wait ${countdown}s` : (
+                <>
+                  <RefreshCw className="h-4 w-4" />
+                  Send New Verification Link
+                </>
+              )}
+            </Button>
+
+            <Button asChild variant="outline" className="w-full">
+              <Link href="/auth/login">
+                Back to Login
               </Link>
             </Button>
           </CardContent>

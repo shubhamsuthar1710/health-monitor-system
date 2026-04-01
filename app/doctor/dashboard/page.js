@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation'
 import { DoctorDashboardContent } from '@/components/doctor/doctor-dashboard-content'
 
 export default async function DoctorDashboardPage() {
-  const cookieStore = cookies()
+  const cookieStore = await cookies() // Add await for Next.js 15+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
@@ -17,23 +17,30 @@ export default async function DoctorDashboardPage() {
     }
   )
 
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { user }, error: userError } = await supabase.auth.getUser()
   
-  if (!user) {
+  if (userError || !user) {
     redirect('/doctor/login')
   }
 
-  // Get doctor profile
-  const { data: doctor, error } = await supabase
-    .from('doctors')
+  // ✅ Get user profile from profiles table (not doctors table)
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
     .select('*')
-    .eq('user_id', user.id)
+    .eq('id', user.id)
     .single()
 
-  if (error || !doctor) {
-    console.error('Doctor not found:', error)
+  if (profileError || !profile) {
+    console.error('Profile not found:', profileError)
     redirect('/doctor/signup')
   }
 
-  return <DoctorDashboardContent doctor={doctor} />
+  // ✅ Check if user has doctor role
+  if (profile.role !== 'doctor') {
+    console.error('User is not a doctor:', profile.role)
+    redirect('/dashboard') // Redirect to patient dashboard if not a doctor
+  }
+
+  // Pass profile data to dashboard content
+  return <DoctorDashboardContent doctor={profile} />
 }

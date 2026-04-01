@@ -13,14 +13,16 @@ export async function GET(request) {
   // If there's an error, redirect to verify page
   if (error) {
     console.error('Auth error:', error, errorDescription);
+    const errorParams = new URLSearchParams(requestUrl.searchParams);
+    errorParams.delete('code');
     return NextResponse.redirect(
-      new URL(`/auth/verify?error=${encodeURIComponent(errorDescription || 'Verification failed')}`, request.url)
+      new URL(`/auth/verify?${errorParams.toString()}`, request.url)
     )
   }
   
   if (code) {
     try {
-      const cookieStore = cookies()
+      const cookieStore = await cookies() // await is required in Next.js 15+
       const supabase = createServerClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL,
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
@@ -51,8 +53,11 @@ export async function GET(request) {
       
       if (exchangeError) {
         console.error('Error exchanging code:', exchangeError);
+        const errorParams = new URLSearchParams(requestUrl.searchParams);
+        errorParams.set('error', exchangeError.message);
+        errorParams.delete('code');
         return NextResponse.redirect(
-          new URL(`/auth/verify?error=${encodeURIComponent(exchangeError.message)}`, request.url)
+          new URL(`/auth/verify?${errorParams.toString()}`, request.url)
         )
       }
 
@@ -60,15 +65,18 @@ export async function GET(request) {
       
     } catch (error) {
       console.error('Error in auth callback:', error)
+      const errorParams = new URLSearchParams(requestUrl.searchParams);
+      errorParams.set('error_description', 'Failed to complete verification');
+      errorParams.delete('code');
       return NextResponse.redirect(
-        new URL(`/auth/verify?error=${encodeURIComponent('Failed to complete verification')}`, request.url)
+        new URL(`/auth/verify?${errorParams.toString()}`, request.url)
       )
     }
   }
 
   // Get the current user to determine redirect
   try {
-    const cookieStore = cookies()
+    const cookieStore = await cookies()
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
@@ -99,33 +107,51 @@ export async function GET(request) {
 
     if (userError) {
       console.error('Error getting user:', userError);
-      return NextResponse.redirect(new URL('/auth/verify', request.url))
+      const errorParams = new URLSearchParams(requestUrl.searchParams);
+      errorParams.set('error', userError.message || 'User lookup failed');
+      errorParams.delete('code');
+      return NextResponse.redirect(new URL(`/auth/verify?${errorParams.toString()}`, request.url))
     }
 
     if (user) {
       console.log('User found:', user.email);
       
-      // Check if user is a doctor
-      const { data: doctor } = await supabase
-        .from('doctors')
-        .select('verification_status')
-        .eq('user_id', user.id)
+      // ✅ NEW: Check user role from profiles table instead of doctors table
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
         .single()
 
-      if (doctor) {
-        console.log('User is a doctor, redirecting to dashboard');
-        // Since doctors are auto-verified, redirect directly to dashboard
+      if (profileError) {
+        console.error('Error fetching profile:', profileError);
+        // Profile might not exist yet (trigger hasn't run)
+        // Wait a moment and retry or redirect to complete profile
+        const nextParam = requestUrl.searchParams.get('next') || '/auth/complete-profile';
+        return NextResponse.redirect(new URL(nextParam, request.url))
+      }
+
+      // Check role and redirect accordingly
+      if (profile?.role === 'doctor') {
+        console.log('User is a doctor, redirecting to doctor dashboard');
         return NextResponse.redirect(new URL('/doctor/dashboard', request.url))
-      } else {
+      } else if (profile?.role === 'patient') {
         const nextParam = requestUrl.searchParams.get('next') || '/auth/complete-profile';
         console.log('User is a patient, redirecting to:', nextParam);
         return NextResponse.redirect(new URL(nextParam, request.url))
+      } else {
+        // Fallback for unknown role
+        console.log('Unknown role, redirecting to complete profile');
+        return NextResponse.redirect(new URL('/auth/complete-profile', request.url))
       }
     }
   } catch (error) {
     console.error('Error in user redirect:', error)
   }
 
-  // If no user or error, redirect to verify page
-  return NextResponse.redirect(new URL('/auth/verify', request.url))
+  // If no user or error, redirect to verify page with context
+  const errorParams = new URLSearchParams(requestUrl.searchParams);
+  errorParams.set('error', 'No user session found after verification');
+  errorParams.delete('code');
+  return NextResponse.redirect(new URL(`/auth/verify?${errorParams.toString()}`, request.url))
 }
