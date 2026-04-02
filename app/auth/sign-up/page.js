@@ -49,6 +49,7 @@ export default function SignUpPage() {
 emailRedirectTo: `${window.location.origin}/auth/callback?next=/auth/complete-profile`,
           data: {
             full_name: fullName,
+            role: "patient", // Default role for new users
           },
         },
       });
