@@ -633,8 +633,8 @@ export default function PatientLoginPage() {
         // Check user profile
         const { data: profile, error } = await supabase
           .from('profiles')
-          .select('role, full_name, date_of_birth') // Check for required fields
-          .eq('id', session.user.id)
+          .select('role, is_profile_complete') // Check for required fields
+          .eq('id', session.user.id)  
           .single();
 
         if (!error && profile) {
@@ -643,9 +643,8 @@ export default function PatientLoginPage() {
             await supabase.auth.signOut();
           } else if (profile.role === 'patient') {
             // Check if profile is complete
-            const isProfileComplete = profile.full_name && profile.date_of_birth;
             
-            if (isProfileComplete) {
+            if (profile.is_profile_complete) {
               // Existing user with complete profile - go to dashboard
               router.push('/dashboard');
             } else {

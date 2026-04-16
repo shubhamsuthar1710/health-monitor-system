@@ -86,10 +86,25 @@ function CompleteProfileContent() {
             setUserName(profile?.full_name || user.user_metadata?.full_name || "");
             
             if (profile) {
-              const hasProfileData = profile.date_of_birth || profile.blood_type || profile.phone;
+              // Check if profile is already complete using the flag
+              const hasProfileData = profile.is_profile_complete === true || 
+                                    profile.date_of_birth || profile.blood_type || profile.phone;
               
-              if (hasProfileData) {
+              if (hasProfileData && profile.is_profile_complete === true) {
                 setIsProfileComplete(true);
+                setProfileForm({
+                  date_of_birth: profile.date_of_birth || "",
+                  blood_type: profile.blood_type || "",
+                  height_cm: profile.height_cm?.toString() || "",
+                  weight_kg: profile.weight_kg?.toString() || "",
+                  phone: profile.phone || "",
+                });
+                
+                if (profile.avatar_url) {
+                  setAvatarPreview(profile.avatar_url);
+                }
+              } else {
+                // Profile exists but incomplete - populate form with existing data
                 setProfileForm({
                   date_of_birth: profile.date_of_birth || "",
                   blood_type: profile.blood_type || "",
@@ -227,18 +242,21 @@ function CompleteProfileContent() {
         avatarUrl = await uploadAvatar(user.id);
       }
 
-      // Update profile with all information
+      // ✅ FIX: Update profile with all information AND set is_profile_complete = true
+      const updateData = {
+        date_of_birth: profileForm.date_of_birth || null,
+        blood_type: profileForm.blood_type || null,
+        height_cm: profileForm.height_cm ? parseFloat(profileForm.height_cm) : null,
+        weight_kg: profileForm.weight_kg ? parseFloat(profileForm.weight_kg) : null,
+        phone: profileForm.phone || null,
+        avatar_url: avatarUrl,
+        is_profile_complete: true,  // ← CRITICAL: Set the flag to true
+        updated_at: new Date().toISOString(),
+      };
+
       const { error: updateError } = await supabase
         .from("profiles")
-        .update({
-          date_of_birth: profileForm.date_of_birth || null,
-          blood_type: profileForm.blood_type || null,
-          height_cm: profileForm.height_cm ? parseFloat(profileForm.height_cm) : null,
-          weight_kg: profileForm.weight_kg ? parseFloat(profileForm.weight_kg) : null,
-          phone: profileForm.phone || null,
-          avatar_url: avatarUrl,
-          updated_at: new Date().toISOString(),
-        })
+        .update(updateData)
         .eq("id", user.id);
 
       if (updateError) throw updateError;

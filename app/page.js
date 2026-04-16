@@ -59,7 +59,7 @@ export default function HomePage() {
                         }),
                         
                         _jsx(Button, { variant: "ghost", asChild: true, children: 
-                            _jsx(Link, { href: "/auth/login", children: "Sign In" })
+                            _jsx(Link, { href: "/auth/login", children: "login" })
                         }),
                         
                         _jsx(Button, { asChild: true, children: 
