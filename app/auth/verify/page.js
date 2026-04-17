@@ -312,7 +312,7 @@
 // }
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -323,7 +323,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, Mail, CheckCircle2, XCircle, RefreshCw, ArrowLeft } from "lucide-react";
 
-export default function VerifyPage() {
+function VerifyPageContent() {
   const [status, setStatus] = useState('checking');
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
@@ -745,5 +745,28 @@ export default function VerifyPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+function LoadingFallback() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+      <Card className="w-full max-w-md">
+        <CardContent className="pt-6">
+          <div className="text-center py-8">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
+            <p>Loading...</p>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+export default function VerifyPage() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <VerifyPageContent />
+    </Suspense>
   );
 }

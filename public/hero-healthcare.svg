@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" fill="none">
+  <rect width="400" height="400" fill="#f0f9ff"/>
+  <!-- Background -->
+  <circle cx="50" cy="50" r="70" fill="#e0f2fe" opacity="0.5"/>
+  <circle cx="380" cy="380" r="100" fill="#dbeafe" opacity="0.5"/>
+  <!-- Heart -->
+  <path d="M200 80 C160 80 140 120 140 160 C140 200 200 260 200 260 C200 260 260 200 260 160 C260 120 240 80 200 80" fill="#ef4444" stroke="#dc2626" stroke-width="3"/>
+  <path d="M185 130 L200 110 M200 110 L215 130" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+  <!-- Pulse line -->
+  <path d="M60 300 Q100 280 120 300 Q140 320 160 300 Q180 280 200 300 Q220 320 240 300 Q260 280 280 300 Q300 320 340 300" stroke="#10b981" stroke-width="3" fill="none"/>
+  <!-- Medical documents -->
+  <rect x="280" y="80" width="70" height="90" rx="4" fill="#fff" stroke="#d1d5db" stroke-width="2"/>
+  <rect x="285" y="85" width="60" height="8" fill="#e5e7eb"/>
+  <rect x="285" y="100" width="50" height="4" fill="#d1d5db"/>
+  <rect x="285" y="110" width="55" height="4" fill="#d1d5db"/>
+  <rect x="285" y="120" width="40" height="4" fill="#d1d5db"/>
+  <rect x="285" y="130" width="45" height="4" fill="#d1d5db"/>
+  <rect x="285" y="145" width="60" height="4" fill="#3b82f6"/>
+  <rect x="285" y="155" width="50" height="4" fill="#3b82f6"/>
+  <!-- Pills -->
+  <ellipse cx="80" cy="120" rx="20" ry="12" fill="#fff" stroke="#9ca3af" stroke-width="2"/>
+  <ellipse cx="80" cy="120" rx="15" ry="8" fill="#dbeafe"/>
+  <line x1="70" y1="120" x2="90" y2="120" stroke="#3b82f6" stroke-width="2"/>
+  <rect x="55" y="140" width="50" height="30" rx="4" fill="#fff" stroke="#9ca3af" stroke-width="2"/>
+  <rect x="60" y="145" width="40" height="8" fill="#22c55e"/>
+  <rect x="70" y="160" width="20" height="4" fill="#22c55e" opacity="0.5"/>
+  <!-- First aid kit -->
+  <rect x="300" y="200" width="60" height="50" rx="4" fill="#fff" stroke="#ef4444" stroke-width="2"/>
+  <rect x="305" y="205" width="50" height="15" fill="#ef4444"/>
+  <circle cx="330" cy="235" r="8" fill="#ffedd5"/>
+  <circle cx="330" cy="235" r="4" fill="#ef4444"/>
+  <!-- Clipboard -->
+  <rect x="60" y="200" width="70" height="90" rx="4" fill="#fff" stroke="#d1d5db" stroke-width="2"/>
+  <rect x="70" y="205" width="50" height="8" fill="#3b82f6" rx="2"/>
+  <rect x="70" y="220" width="40" height="3" fill="#d1d5db"/>
+  <rect x="70" y="228" width="50" height="3" fill="#d1d5db"/>
+  <rect x="70" y="236" width="35" height="3" fill="#d1d5db"/>
+  <rect x="70" y="244" width="45" height="3" fill="#d1d5db"/>
+  <rect x="70" y="252" width="40" height="3" fill="#d1d5db"/>
+  <rect x="70" y="265" width="50" height="3" fill="#10b981" rx="1"/>
+  <rect x="70" y="273" width="35" height="3" fill="#10b981" rx="1"/>
+  <!-- Thermometer -->
+  <rect x="140" y="350" width="30" height="12" rx="6" fill="#fff" stroke="#dc2626"/>
+  <rect x="355" y="85" width="25" height="10" rx="5" fill="#fff" stroke="#dc2626"/>
+  <circle cx="140" cy="350" r="5" fill="#ef4444"/>
+  <!-- Bandage -->
+  <rect x="320" y="270" width="50" height="20" rx="10" fill="#fce7f3" stroke="#f9a8d4"/>
+  <rect x="330" y="275" width="30" height="10" rx="5" fill="#fbcfe8"/>
+  <!-- Syringe -->
+  <rect x="170" y="120" width="40" height="8" rx="2" fill="#e5e7eb" stroke="#9ca3af"/>
+  <rect x="210" y="118" width="20" height="12" rx="1" fill="#d1d5db"/>
+  <circle cx="232" cy="124" r="4" fill="#9ca3af"/>
+  <line x1="175" y1="124" x2="205" y2="124" stroke="#6b7280"/>
+</svg>

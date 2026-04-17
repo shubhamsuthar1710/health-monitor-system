@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, Mail, RefreshCw, ArrowLeft, AlertCircle } from "lucide-react";
 
-export default function VerifyPage() {
+function VerifyPageContent() {
   const [status, setStatus] = useState('loading');
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
@@ -236,5 +236,28 @@ function Input({ id, type = "text", placeholder, value, onChange }) {
       onChange={onChange}
       className="w-full px-3 py-2 border rounded-md"
     />
+  );
+}
+
+function LoadingFallback() {
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <Card className="w-full max-w-md">
+        <CardContent className="pt-6">
+          <div className="text-center py-8">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
+            <p>Loading...</p>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+export default function VerifyPage() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <VerifyPageContent />
+    </Suspense>
   );
 }

@@ -1,16 +1,37 @@
 "use client";
 
+import Image from "next/image";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Activity, Heart, Pill, AlertTriangle, Phone, Plus, Clock, Thermometer, Droplets, Scale } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { 
+  Activity, 
+  Heart, 
+  Pill, 
+  AlertTriangle, 
+  Phone, 
+  Plus, 
+  Clock, 
+  Thermometer, 
+  Droplets, 
+  Scale,
+  Calendar,
+  FileText,
+  Settings,
+  User,
+  Bell,
+  Menu,
+  TrendingUp,
+  ActivitySquare
+} from "lucide-react";
 import Link from "next/link";
 import { QuickEntryDialog } from "./quick-entry-dialog";
 import { useState, useEffect } from "react";
 
 const entryTypeIcons = {
   blood_pressure: Heart,
-  heart_rate: Activity,
+  heart_rate: ActivitySquare,
   temperature: Thermometer,
   blood_sugar: Droplets,
   weight: Scale,
@@ -29,7 +50,6 @@ function formatEntryValue(entry) {
   return `${entry.value} ${entry.unit || ""}`.trim();
 }
 
-// FIXED: Use useEffect to handle client-side only date formatting
 function useFormattedDate(dateString) {
   const [formattedDate, setFormattedDate] = useState("");
 
@@ -54,13 +74,11 @@ function useFormattedDate(dateString) {
   return formattedDate;
 }
 
-// FIXED: Simple component to handle date formatting
 function EntryDate({ dateString }) {
   const formattedDate = useFormattedDate(dateString);
   
-  // Return a placeholder during SSR, then update on client
   if (!formattedDate) {
-    return <span className="text-xs text-muted-foreground">Just now</span>;
+    return <span className="text-xs text-muted-foreground">Loading...</span>;
   }
   
   return <span className="text-xs text-muted-foreground">{formattedDate}</span>;
@@ -77,123 +95,147 @@ export function DashboardContent({
   const [isQuickEntryOpen, setIsQuickEntryOpen] = useState(false);
   const [isClient, setIsClient] = useState(false);
 
-  // FIXED: Ensure we only show dynamic content after client hydration
   useEffect(() => {
     setIsClient(true);
   }, []);
 
   const firstName = profile?.full_name?.split(" ")[0] || user.email?.split("@")[0] || "there";
+  
+  const healthScore = profile ? 
+    Math.min(100, 
+      (profile.blood_type ? 20 : 0) +
+      (profile.date_of_birth ? 20 : 0) +
+      (profile.height_cm ? 20 : 0) +
+      (profile.weight_kg ? 20 : 0) +
+      (medications.length > 0 ? 10 : 0) +
+      (allergies.length >= 0 ? 10 : 0)
+    ) : 0;
+
+  const getScoreColor = (score) => {
+    if (score >= 80) return "text-emerald-600";
+    if (score >= 50) return "text-amber-500";
+    return "text-rose-500";
+  };
+
+  const getScoreGradient = (score) => {
+    if (score >= 80) return "from-emerald-500 to-emerald-600";
+    if (score >= 50) return "from-amber-500 to-orange-500";
+    return "from-rose-500 to-rose-600";
+  };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">
-            Welcome back, {firstName}
-          </h1>
-          <p className="text-muted-foreground">Here's your health overview</p>
+    <div className="space-y-8">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 animate-fade-in">
+        <div className="flex items-center gap-4">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center overflow-hidden">
+            {profile?.avatar_url ? (
+              <Image
+                src={profile.avatar_url}
+                alt={firstName}
+                width={56}
+                height={56}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <User className="h-7 w-7 text-primary" />
+            )}
+          </div>
+          <div>
+            <h1 className="text-2xl font-semibold">Welcome back, {firstName}</h1>
+            <p className="text-muted-foreground text-sm">Here's your health overview</p>
+          </div>
         </div>
-        <Button onClick={() => setIsQuickEntryOpen(true)} className="gap-2">
-          <Plus className="h-4 w-4" />
-          Quick Entry
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="icon" asChild className="h-10 w-10 border-border hover:bg-accent transition-colors">
+            <Link href="/dashboard/settings">
+              <Settings className="h-4 w-4" />
+            </Link>
+          </Button>
+          <Button onClick={() => setIsQuickEntryOpen(true)} className="gap-2 h-10 px-4 bg-primary hover:bg-primary/90 transition-colors">
+            <Plus className="h-4 w-4" />
+            <span className="hidden sm:inline">Quick Entry</span>
+          </Button>
+          <Button variant="outline" size="icon" asChild className="h-11 w-11 border-border hover:bg-accent transition-colors overflow-hidden p-0">
+            <Link href="/dashboard/profile">
+              {profile?.avatar_url ? (
+                <Image
+                  src={profile.avatar_url}
+                  alt={firstName}
+                  width={44}
+                  height={44}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <User className="h-5 w-5" />
+              )}
+            </Link>
+          </Button>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-chart-1/10">
-                <Activity className="h-5 w-5 text-chart-1" />
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        {[
+          { title: "Entries", value: recentEntries.length, icon: Activity, color: "bg-sky-50 text-sky-600", delay: 0 },
+          { title: "Medications", value: medications.length, icon: Pill, color: "bg-violet-50 text-violet-600", delay: 100 },
+          { title: "Allergies", value: allergies.length, icon: AlertTriangle, color: "bg-amber-50 text-amber-600", delay: 200 },
+          { title: "Emergency", value: emergencyContact ? "1" : "0", icon: Phone, color: "bg-emerald-50 text-emerald-600", delay: 300 },
+        ].map((stat, index) => (
+          <Card key={stat.title} className={`animate-fade-in-up border-border/60 hover:border-border transition-colors animation-delay-${stat.delay}`}>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className={`p-2.5 rounded-xl ${stat.color}`}>
+                  <stat.icon className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">{stat.title}</p>
+                  <p className="text-xl font-semibold">{stat.value}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Recent Entries</p>
-                <p className="text-2xl font-semibold">{recentEntries.length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-chart-2/10">
-                <Pill className="h-5 w-5 text-chart-2" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Active Medications</p>
-                <p className="text-2xl font-semibold">{medications.length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-chart-3/10">
-                <AlertTriangle className="h-5 w-5 text-chart-3" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Known Allergies</p>
-                <p className="text-2xl font-semibold">{allergies.length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-chart-4/10">
-                <Heart className="h-5 w-5 text-chart-4" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Blood Type</p>
-                <p className="text-2xl font-semibold">
-                  {profile?.blood_type || "Not set"}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-2">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle className="text-lg">Recent Health Entries</CardTitle>
-              <CardDescription>Your latest recorded health data</CardDescription>
+        <Card className="lg:col-span-2 border-border/60 animate-fade-in-up animation-delay-200">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Activity className="h-5 w-5 text-primary" />
+                  Recent Health Entries
+                </CardTitle>
+                <CardDescription>Your latest recorded health data</CardDescription>
+              </div>
+              <Button variant="ghost" size="sm" asChild className="text-muted-foreground hover:text-foreground">
+                <Link href="/dashboard/timeline">View All</Link>
+              </Button>
             </div>
-            <Button variant="outline" size="sm" asChild>
-              <Link href="/dashboard/timeline">View All</Link>
-            </Button>
           </CardHeader>
           <CardContent>
             {recentEntries.length > 0 ? (
-              <div className="space-y-3">
-                {recentEntries.map((entry) => {
+              <div className="space-y-2">
+                {recentEntries.map((entry, index) => {
                   const Icon = entryTypeIcons[entry.entry_type] || Activity;
                   return (
                     <div
                       key={entry.id}
-                      className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
+                      className="flex items-center justify-between p-3.5 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors animate-fade-in-up"
+                      style={{ animationDelay: `${index * 50}ms` }}
                     >
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-md bg-background">
+                      <div className="flex items-center gap-4">
+                        <div className="p-2.5 rounded-lg bg-primary/8">
                           <Icon className="h-4 w-4 text-primary" />
                         </div>
                         <div>
                           <p className="font-medium text-sm">
                             {entryTypeLabels[entry.entry_type] || entry.entry_type}
                           </p>
-                          {/* FIXED: Use the new EntryDate component */}
                           <EntryDate dateString={entry.recorded_at} />
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="font-semibold">{formatEntryValue(entry)}</p>
+                        <p className="text-lg font-semibold">{formatEntryValue(entry)}</p>
                         {entry.notes && (
                           <p className="text-xs text-muted-foreground truncate max-w-[120px]">
                             {entry.notes}
@@ -205,14 +247,13 @@ export function DashboardContent({
                 })}
               </div>
             ) : (
-              <div className="text-center py-8">
-                <Clock className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />
-                <p className="text-muted-foreground">No health entries yet</p>
-                <Button
-                  variant="link"
-                  className="mt-2"
-                  onClick={() => setIsQuickEntryOpen(true)}
-                >
+              <div className="text-center py-12">
+                <div className="w-16 h-16 rounded-2xl bg-muted/50 flex items-center justify-center mx-auto mb-4">
+                  <Activity className="h-8 w-8 text-muted-foreground/50" />
+                </div>
+                <p className="text-muted-foreground mb-4">No health entries yet</p>
+                <Button onClick={() => setIsQuickEntryOpen(true)} className="bg-primary hover:bg-primary/90 transition-colors">
+                  <Plus className="h-4 w-4 mr-2" />
                   Add your first entry
                 </Button>
               </div>
@@ -221,54 +262,49 @@ export function DashboardContent({
         </Card>
 
         <div className="space-y-4">
-          <Card>
+          <Card className="border-border/60 animate-fade-in-up animation-delay-300">
             <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Pill className="h-4 w-4" />
-                  Current Medications
-                </CardTitle>
-                <Button variant="ghost" size="sm" asChild>
-                  <Link href="/dashboard/profile#medications">Edit</Link>
-                </Button>
-              </div>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Pill className="h-4 w-4 text-violet-500" />
+                Current Medications
+              </CardTitle>
             </CardHeader>
             <CardContent>
               {medications.length > 0 ? (
                 <div className="space-y-2">
-                  {medications.slice(0, 3).map((med) => (
-                    <div key={med.id} className="flex items-center justify-between">
-                      <span className="text-sm font-medium">{med.name}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {med.dosage}
-                      </span>
+                  {medications.slice(0, 4).map((med) => (
+                    <div key={med.id} className="flex items-center justify-between p-2.5 rounded-lg bg-muted/30">
+                      <div>
+                        <p className="font-medium text-sm">{med.name}</p>
+                        <p className="text-xs text-muted-foreground">{med.dosage}</p>
+                      </div>
+                      {med.is_active && (
+                        <Badge variant="outline" className="text-xs bg-violet-50 text-violet-700 border-violet-200">Active</Badge>
+                      )}
                     </div>
                   ))}
-                  {medications.length > 3 && (
-                    <p className="text-xs text-muted-foreground">
-                      +{medications.length - 3} more
-                    </p>
+                  {medications.length > 4 && (
+                    <Button variant="ghost" size="sm" className="w-full" asChild>
+                      <Link href="/dashboard/profile#medications">
+                        +{medications.length - 4} more
+                      </Link>
+                    </Button>
                   )}
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-muted-foreground text-center py-4">
                   No medications added
                 </p>
               )}
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-border/60 animate-fade-in-up animation-delay-400">
             <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <AlertTriangle className="h-4 w-4" />
-                  Allergies
-                </CardTitle>
-                <Button variant="ghost" size="sm" asChild>
-                  <Link href="/dashboard/profile#allergies">Edit</Link>
-                </Button>
-              </div>
+              <CardTitle className="text-base flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-amber-500" />
+                Allergies
+              </CardTitle>
             </CardHeader>
             <CardContent>
               {allergies.length > 0 ? (
@@ -277,49 +313,84 @@ export function DashboardContent({
                     <Badge
                       key={allergy.id}
                       variant={allergy.severity === "severe" ? "destructive" : "secondary"}
+                      className="text-xs"
                     >
                       {allergy.allergen}
                     </Badge>
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-muted-foreground text-center py-4">
                   No allergies recorded
                 </p>
               )}
+              <Button variant="outline" size="sm" className="w-full mt-3 border-border hover:bg-accent" asChild>
+                <Link href="/dashboard/profile#allergies">Manage Allergies</Link>
+              </Button>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-border/60 animate-fade-in-up animation-delay-500">
             <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Phone className="h-4 w-4" />
-                  Emergency Contact
-                </CardTitle>
-                <Button variant="ghost" size="sm" asChild>
-                  <Link href="/dashboard/settings#emergency">Edit</Link>
-                </Button>
-              </div>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Phone className="h-4 w-4 text-emerald-500" />
+                Emergency Contact
+              </CardTitle>
             </CardHeader>
             <CardContent>
               {emergencyContact ? (
-                <div>
-                  <p className="font-medium text-sm">{emergencyContact.name}</p>
+                <div className="p-3 rounded-xl bg-emerald-50/50">
+                  <p className="font-medium">{emergencyContact.name}</p>
                   <p className="text-xs text-muted-foreground">
                     {emergencyContact.relationship}
                   </p>
-                  <p className="text-sm mt-1">{emergencyContact.phone}</p>
+                  <p className="text-sm mt-2 font-medium">{emergencyContact.phone}</p>
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-muted-foreground text-center py-4">
                   No emergency contact set
                 </p>
               )}
+              <Button variant="outline" size="sm" className="w-full mt-3 border-border hover:bg-accent" asChild>
+                <Link href="/dashboard/settings#emergency">
+                  {emergencyContact ? "Update Contact" : "Add Contact"}
+                </Link>
+              </Button>
             </CardContent>
           </Card>
         </div>
       </div>
+
+      <Card className="border-border/60 animate-fade-in-up animation-delay-500">
+        <CardContent className="p-4">
+          <div className="flex flex-wrap gap-3">
+            <Button variant="outline" asChild className="border-border hover:bg-accent transition-colors">
+              <Link href="/dashboard/timeline">
+                <Calendar className="h-4 w-4 mr-2" />
+                View Timeline
+              </Link>
+            </Button>
+            <Button variant="outline" asChild className="border-border hover:bg-accent transition-colors">
+              <Link href="/dashboard/documents">
+                <FileText className="h-4 w-4 mr-2" />
+                My Documents
+              </Link>
+            </Button>
+            <Button variant="outline" asChild className="border-border hover:bg-accent transition-colors">
+              <Link href="/dashboard/profile">
+                <User className="h-4 w-4 mr-2" />
+                Edit Profile
+              </Link>
+            </Button>
+            <Button variant="outline" asChild className="border-border hover:bg-accent transition-colors">
+              <Link href="/dashboard/settings">
+                <Settings className="h-4 w-4 mr-2" />
+                Settings
+              </Link>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       <QuickEntryDialog open={isQuickEntryOpen} onOpenChange={setIsQuickEntryOpen} />
     </div>

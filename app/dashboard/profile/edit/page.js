@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -15,7 +15,7 @@ import { Loader2, Calendar, Ruler, Weight, User, Mail, ArrowLeft, CheckCircle2, 
 
 const bloodTypes = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
 
-export default function EditProfilePage() {
+function EditProfilePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
@@ -407,5 +407,21 @@ export default function EditProfilePage() {
         </Card>
       </div>
     </div>
+  );
+}
+
+function LoadingFallback() {
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+    </div>
+  );
+}
+
+export default function EditProfilePage() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <EditProfilePageContent />
+    </Suspense>
   );
 }

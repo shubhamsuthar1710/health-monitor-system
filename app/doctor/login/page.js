@@ -3,13 +3,14 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Stethoscope, Loader2, Mail, Lock, Heart, ArrowLeft, Chrome } from "lucide-react";
+import { Stethoscope, Loader2, Heart, ArrowLeft, Chrome, Activity, Shield, Clock, BadgeCheck } from "lucide-react";
 
 export default function DoctorLoginPage() {
   const [email, setEmail] = useState("");
@@ -39,11 +40,7 @@ export default function DoctorLoginPage() {
           .single();
 
         if (profile?.role === 'doctor') {
-          if (profile.is_profile_complete) {
-            router.push('/doctor/dashboard');
-          } else {
-            router.push('/doctor/complete-profile');
-          }
+          router.push(profile.is_profile_complete ? '/doctor/dashboard' : '/doctor/complete-profile');
         }
       }
     } catch (error) {
@@ -51,32 +48,31 @@ export default function DoctorLoginPage() {
     }
   };
 
-  // Google Sign-In Handler for Doctors
   const handleGoogleLogin = async () => {
     setIsLoading(true);
     setError(null);
     
     try {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-        queryParams: {
-          access_type: 'offline',
-          prompt: 'consent',
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
+          data: {
+            user_type: 'doctor',
+            role: 'doctor',
+          },
         },
-        data: {
-          user_type: 'doctor',
-          role: 'doctor',
-        },
-      },
-    });
-    if (error) throw error;
-  } catch (error) {
-    setError(error.message || "Google login failed");
-    setIsLoading(false);
-  }
-};
+      });
+      if (error) throw error;
+    } catch (error) {
+      setError(error.message || "Google login failed");
+      setIsLoading(false);
+    }
+  };
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -118,12 +114,7 @@ export default function DoctorLoginPage() {
         throw new Error("This account is not registered as a doctor");
       }
 
-      // Check if profile is complete
-      if (profile.is_profile_complete) {
-        router.push('/doctor/dashboard');
-      } else {
-        router.push('/doctor/complete-profile');
-      }
+      router.push(profile.is_profile_complete ? '/doctor/dashboard' : '/doctor/complete-profile');
       router.refresh();
       
     } catch (error) {
@@ -136,137 +127,147 @@ export default function DoctorLoginPage() {
   if (!mounted) return null;
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 p-4">
-      <Link href="/" className="absolute top-4 left-4">
-        <Button variant="ghost" size="sm" className="gap-2">
-          <ArrowLeft className="h-4 w-4" />
-          Home
-        </Button>
-      </Link>
-
-      <Card className="w-full max-w-md shadow-xl border-0">
-        <CardHeader className="text-center space-y-4">
-          <div className="flex justify-center">
-            <div className="p-3 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 shadow-lg">
-              <Stethoscope className="h-10 w-10 text-primary" />
+    <div className="min-h-screen flex lg:flex-row flex-col">
+      {/* Left Side - Info - Doctor Theme */}
+      <div className="hidden lg:flex lg:w-[45%] relative bg-gradient-to-br from-blue-600 via-indigo-600 to-indigo-800 min-h-screen overflow-hidden">
+        <div className="absolute inset-0 opacity-20">
+          <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+            <defs>
+              <pattern id="grid-doctor" width="10" height="10" patternUnits="userSpaceOnUse">
+                <path d="M 10 0 L 0 0 0 10" fill="none" stroke="white" strokeWidth="0.5"/>
+              </pattern>
+            </defs>
+            <rect width="100" height="100" fill="url(#grid-doctor)"/>
+          </svg>
+        </div>
+        
+        {/* Floating elements */}
+        <div className="absolute top-32 left-16 w-20 h-20 bg-white/10 rounded-2xl backdrop-blur-sm border border-white/20 animate-pulse-soft" />
+        <div className="absolute bottom-40 right-16 w-24 h-24 bg-white/10 rounded-full blur-2xl" />
+        <div className="absolute top-20 -left-20 w-96 h-96 bg-white/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-20 -right-20 w-80 h-80 bg-white/10 rounded-full blur-3xl" />
+        
+        <div className="relative z-10 flex flex-col justify-between p-12 text-white">
+          <Link href="/" className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-white/20 backdrop-blur-sm">
+              <Activity className="h-6 w-6" />
+            </div>
+            <span className="font-semibold text-xl tracking-tight">HealthTrack</span>
+          </Link>
+          
+          <div>
+            <div className="flex items-center gap-3 mb-4">
+              <BadgeCheck className="h-8 w-8" />
+              <h1 className="text-4xl font-bold">For Doctors</h1>
+            </div>
+            <p className="text-white/80 text-lg mb-8">
+              Access patient records, review medical history, and provide better care with complete context.
+            </p>
+            <div className="flex items-center gap-6 text-sm text-white/70">
+              <div className="flex items-center gap-2">
+                <Shield className="h-4 w-4" />
+                <span>Secure Access</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Clock className="h-4 w-4" />
+                <span>24/7 Available</span>
+              </div>
             </div>
           </div>
-          <div>
-            <CardTitle className="text-3xl font-bold">Doctor Login</CardTitle>
-            <CardDescription className="text-base mt-2">
-              Secure access for healthcare providers
-            </CardDescription>
-          </div>
-        </CardHeader>
+        </div>
+      </div>
 
-        <CardContent className="space-y-6">
-          {/* Google Sign In Button */}
+      {/* Right Side - Form */}
+      <div className="flex-1 flex items-center justify-center p-6 sm:p-10 lg:p-12 bg-background">
+        <div className="w-full max-w-md">
+          <Link href="/" className="flex items-center gap-2 mb-8 lg:hidden">
+            <div className="p-2 rounded-lg bg-primary/10">
+              <Activity className="h-5 w-5 text-primary" />
+            </div>
+            <span className="font-semibold text-lg">HealthTrack</span>
+          </Link>
+
+          <div className="mb-8">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="p-2 rounded-lg bg-primary/10">
+                <Stethoscope className="h-6 w-6 text-primary" />
+              </div>
+              <h2 className="text-2xl font-bold">Doctor Login</h2>
+            </div>
+            <p className="text-muted-foreground">Secure access for healthcare providers</p>
+          </div>
+
           <Button
             onClick={handleGoogleLogin}
             variant="outline"
             size="lg"
-            className="w-full gap-3 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all duration-200 shadow-sm"
+            className="w-full mb-6"
             disabled={isLoading}
           >
-            <Chrome className="h-5 w-5" />
-            <span className="font-medium">Continue with Google</span>
+            <Chrome className="h-5 w-5 mr-2" />
+            Continue with Google
           </Button>
 
-          {/* Divider */}
-          <div className="relative">
+          <div className="relative mb-6">
             <div className="absolute inset-0 flex items-center">
               <span className="w-full border-t" />
             </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-3 text-muted-foreground">
-                Or continue with email
-              </span>
+            <div className="relative flex justify-center text-sm">
+              <span className="bg-background px-4 text-muted-foreground">or continue with email</span>
             </div>
           </div>
 
-          {/* Email/Password Form */}
-          <form onSubmit={handleLogin} className="space-y-5">
-            {error && (
-              <Alert variant="destructive">
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
+          {error && (
+            <Alert variant="destructive" className="mb-6">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
 
+          <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email Address</Label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="doctor@hospital.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="pl-9 h-11"
-                  required
-                  disabled={isLoading}
-                />
-              </div>
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="doctor@hospital.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="Enter your password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="pl-9 h-11"
-                  required
-                  disabled={isLoading}
-                />
-              </div>
+              <Input
+                id="password"
+                type="password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
             </div>
 
-            <Button type="submit" size="lg" className="w-full" disabled={isLoading}>
+            <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
               {isLoading ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   Signing in...
                 </>
               ) : (
-                <>
-                  <Stethoscope className="mr-2 h-4 w-4" />
-                  Sign In
-                </>
+                "Sign in"
               )}
             </Button>
           </form>
 
-          <div className="text-center">
-            <p className="text-sm text-muted-foreground">
-              Don't have a doctor account?{" "}
-              <Link href="/doctor/signup" className="text-primary hover:underline font-semibold">
-                Register here
-              </Link>
-            </p>
-          </div>
-
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-3 text-muted-foreground">Patient?</span>
-            </div>
-          </div>
-
-          <Button variant="outline" className="w-full gap-2" asChild>
-            <Link href="/auth/login">
-              <Heart className="h-4 w-4" />
+          <div className="mt-6 text-center text-sm text-muted-foreground">
+            <p>Not a doctor?{" "}</p>
+            <Link href="/auth/login" className="text-primary hover:underline font-medium">
               Patient Login
             </Link>
-          </Button>
-        </CardContent>
-      </Card>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

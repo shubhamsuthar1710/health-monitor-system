@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" fill="none">
+  <rect width="400" height="300" fill="#f0f9ff"/>
+  <!-- Background pattern -->
+  <circle cx="0" cy="0" r="80" fill="#e0f2fe" opacity="0.5"/>
+  <circle cx="400" cy="300" r="120" fill="#dbeafe" opacity="0.5"/>
+  <!-- Doctor -->
+  <circle cx="200" cy="100" r="35" fill="#f8d7da"/>
+  <circle cx="200" cy="100" r="28" fill="#fbcfe8"/>
+  <circle cx="188" cy="95" r="3" fill="#374151"/>
+  <circle cx="212" cy="95" r="3" fill="#374151"/>
+  <path d="M190 110 Q200 118 210 110" stroke="#374151" stroke-width="2" fill="none"/>
+  <!-- Stethoscope -->
+  <path d="M175 130 Q175 155 200 155 Q225 155 225 130" stroke="#dc2626" stroke-width="3" fill="none"/>
+  <circle cx="200" cy="155" r="6" fill="#dc2626"/>
+  <!-- Body -->
+  <rect x="160" y="135" width="80" height="90" rx="10" fill="#3b82f6"/>
+  <rect x="170" y="225" width="25" height="60" rx="5" fill="#1e40af"/>
+  <rect x="205" y="225" width="25" height="60" rx="5" fill="#1e40af"/>
+  <!-- Document/clipboard -->
+  <rect x="280" y="80" width="60" height="80" rx="4" fill="#fff" stroke="#d1d5db" stroke-width="2"/>
+  <rect x="285" y="85" width="50" height="8" fill="#e5e7eb"/>
+  <rect x="285" y="100" width="40" height="4" fill="#e5e7eb"/>
+  <rect x="285" y="110" width="45" height="4" fill="#e5e7eb"/>
+  <rect x="285" y="120" width="35" height="4" fill="#e5e7eb"/>
+  <rect x="285" y="130" width="40" height="4" fill="#e5e7eb"/>
+  <!-- Heart monitor line -->
+  <path d="M60 200 Q80 180 100 200 Q120 220 140 200 Q160 180 180 200 Q200 220 220 200" stroke="#10b981" stroke-width="2" fill="none"/>
+  <!-- Pill bottles -->
+  <rect x="60" y="230" width="25" height="35" rx="3" fill="#fff" stroke="#9ca3af"/>
+  <circle cx="72.5" cy="235" r="8" fill="#10b981"/>
+  <rect x="75" y="250" width="20" height="10" rx="2" fill="#10b981" opacity="0.5"/>
+  <rect x="100" y="235" width="25" height="30" rx="3" fill="#fff" stroke="#9ca3af"/>
+  <circle cx="112.5" cy="240" r="6" fill="#3b82f6"/>
+  <rect x="280" y="145" width="40" height="4" fill="#e5e7eb"/>
+  <rect x="280" y="155" width="30" height="4" fill="#e5e7eb"/>
+</svg>

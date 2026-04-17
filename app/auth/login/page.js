@@ -1,600 +1,9 @@
-// "use client";
-
-// import { useState, useEffect } from "react";
-// import Link from "next/link";
-// import { useRouter } from "next/navigation";
-// import { getSupabaseBrowserClient } from "@/lib/supabase/client";
-// import { Button } from "@/components/ui/button";
-// import { Input } from "@/components/ui/input";
-// import { Label } from "@/components/ui/label";
-// import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-// import { Alert, AlertDescription } from "@/components/ui/alert";
-// import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-// import { Heart, Loader2, Mail, Lock, Fingerprint, Stethoscope } from "lucide-react";
-
-// export default function PatientLoginPage() {
-//   const [loginMethod, setLoginMethod] = useState("email");
-//   const [email, setEmail] = useState("");
-//   const [password, setPassword] = useState("");
-//   const [patientId, setPatientId] = useState("");
-//   const [error, setError] = useState(null);
-//   const [isLoading, setIsLoading] = useState(false);
-  
-//   const router = useRouter();
-//   const supabase = getSupabaseBrowserClient();
-
-//   // Check if user is already logged in
-//   useEffect(() => {
-//     const checkUser = async () => {
-//       const { data: { session } } = await supabase.auth.getSession();
-      
-//       if (session) {
-//         // Check if user is a patient (not a doctor)
-//         const { data: doctor } = await supabase
-//           .from('doctors')
-//           .select('id')
-//           .eq('user_id', session.user.id)
-//           .maybeSingle();
-
-//         if (!doctor) {
-//           router.push('/dashboard');
-//         }
-//       }
-//     };
-    
-//     checkUser();
-//   }, [router, supabase]);
-
-//   const handleLogin = async (e) => {
-//     e.preventDefault();
-//     setError(null);
-//     setIsLoading(true);
-
-//     try {
-//       let loginEmail = email;
-
-//       if (loginMethod === "patientId") {
-//         // Find user by patient ID
-//         const { data: profile, error: profileError } = await supabase
-//           .from('profiles')
-//           .select('email')
-//           .eq('patient_id', patientId)
-//           .maybeSingle();
-
-//         if (profileError || !profile) {
-//           throw new Error("Invalid Patient ID");
-//         }
-//         loginEmail = profile.email;
-//       }
-
-//       // Attempt login
-//       const { error: signInError } = await supabase.auth.signInWithPassword({
-//         email: loginEmail,
-//         password,
-//       });
-
-//       if (signInError) throw signInError;
-
-//       // Verify this is a patient account
-//       const { data: { user } } = await supabase.auth.getUser();
-//       const { data: doctor } = await supabase
-//         .from('doctors')
-//         .select('id')
-//         .eq('user_id', user.id)
-//         .maybeSingle();
-
-//       if (doctor) {
-//         // This is a doctor - sign them out
-//         await supabase.auth.signOut();
-//         throw new Error("Please use the doctor login portal");
-//       }
-
-//       router.push('/dashboard');
-//       router.refresh();
-      
-//     } catch (error) {
-//       console.error("Login error:", error);
-//       setError(error.message || "Invalid credentials");
-//     } finally {
-//       setIsLoading(false);
-//     }
-//   };
-
-//   return (
-//     <div className="min-h-screen flex items-center justify-center bg-background p-4">
-//       <Card className="w-full max-w-md">
-//         <CardHeader className="text-center">
-//           <div className="flex justify-center mb-4">
-//             <div className="p-3 rounded-full bg-primary/10">
-//               <Heart className="h-8 w-8 text-primary" />
-//             </div>
-//           </div>
-//           <CardTitle className="text-2xl font-bold">Patient Login</CardTitle>
-//           <CardDescription>
-//             Sign in with your email or Patient ID
-//           </CardDescription>
-//         </CardHeader>
-
-//         <CardContent>
-//           <form onSubmit={handleLogin} className="space-y-4">
-//             {error && (
-//               <Alert variant="destructive">
-//                 <AlertDescription>{error}</AlertDescription>
-//               </Alert>
-//             )}
-
-//             <Tabs value={loginMethod} onValueChange={setLoginMethod} className="w-full">
-//               <TabsList className="grid w-full grid-cols-2">
-//                 <TabsTrigger value="email" className="gap-2">
-//                   <Mail className="h-4 w-4" />
-//                   Email
-//                 </TabsTrigger>
-//                 <TabsTrigger value="patientId" className="gap-2">
-//                   <Fingerprint className="h-4 w-4" />
-//                   Patient ID
-//                 </TabsTrigger>
-//               </TabsList>
-
-//               <TabsContent value="email" className="space-y-4 mt-4">
-//                 <div className="space-y-2">
-//                   <Label htmlFor="email">Email</Label>
-//                   <div className="relative">
-//                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-//                     <Input
-//                       id="email"
-//                       type="email"
-//                       placeholder="you@example.com"
-//                       value={email}
-//                       onChange={(e) => setEmail(e.target.value)}
-//                       className="pl-9"
-//                       required={loginMethod === "email"}
-//                       disabled={isLoading}
-//                     />
-//                   </div>
-//                 </div>
-//               </TabsContent>
-
-//               <TabsContent value="patientId" className="space-y-4 mt-4">
-//                 <div className="space-y-2">
-//                   <Label htmlFor="patientId">Patient ID</Label>
-//                   <div className="relative">
-//                     <Fingerprint className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-//                     <Input
-//                       id="patientId"
-//                       placeholder="Enter 8-digit ID"
-//                       value={patientId}
-//                       onChange={(e) => setPatientId(e.target.value)}
-//                       maxLength={8}
-//                       pattern="\d{8}"
-//                       className="pl-9 font-mono"
-//                       required={loginMethod === "patientId"}
-//                       disabled={isLoading}
-//                     />
-//                   </div>
-//                   <p className="text-xs text-muted-foreground">
-//                     Enter the 8-digit ID from your profile
-//                   </p>
-//                 </div>
-//               </TabsContent>
-//             </Tabs>
-
-//             <div className="space-y-2">
-//               <Label htmlFor="password">Password</Label>
-//               <div className="relative">
-//                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-//                 <Input
-//                   id="password"
-//                   type="password"
-//                   placeholder="Enter your password"
-//                   value={password}
-//                   onChange={(e) => setPassword(e.target.value)}
-//                   className="pl-9"
-//                   required
-//                   disabled={isLoading}
-//                 />
-//               </div>
-//             </div>
-
-//             <Button type="submit" className="w-full" disabled={isLoading}>
-//               {isLoading ? (
-//                 <>
-//                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-//                   Signing in...
-//                 </>
-//               ) : (
-//                 "Sign In"
-//               )}
-//             </Button>
-//           </form>
-
-//           <div className="mt-6 space-y-4">
-//             <p className="text-center text-sm text-muted-foreground">
-//               Don't have an account?{" "}
-//               <Link href="/auth/sign-up" className="text-primary hover:underline font-medium">
-//                 Sign up as Patient
-//               </Link>
-//             </p>
-            
-//             <div className="relative">
-//               <div className="absolute inset-0 flex items-center">
-//                 <span className="w-full border-t" />
-//               </div>
-//               <div className="relative flex justify-center text-xs uppercase">
-//                 <span className="bg-background px-2 text-muted-foreground">
-//                   Healthcare Provider?
-//                 </span>
-//               </div>
-//             </div>
-            
-//             <Button variant="outline" className="w-full gap-2" asChild>
-//               <Link href="/doctor/login">
-//                 <Stethoscope className="h-4 w-4" />
-//                 Go to Doctor Login
-//               </Link>
-//             </Button>
-//           </div>
-//         </CardContent>
-//       </Card>
-//     </div>
-//   );
-// }
-// "use client";
-
-// import { useState, useEffect } from "react";
-// import Link from "next/link";
-// import { useRouter } from "next/navigation";
-// import { getSupabaseBrowserClient } from "@/lib/supabase/client"; // ✅ Fixed import
-// import { Button } from "@/components/ui/button";
-// import { Input } from "@/components/ui/input";
-// import { Label } from "@/components/ui/label";
-// import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-// import { Alert, AlertDescription } from "@/components/ui/alert";
-// import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-// import { Heart, Loader2, Mail, Lock, Fingerprint, Stethoscope, Chrome } from "lucide-react";
-
-// const INITIAL_STATE = {
-//   email: "",
-//   password: "",
-//   patientId: "",
-//   loginMethod: "email",
-//   isLoading: false,
-//   error: null,
-// };
-
-// export default function PatientLoginPage() {
-//   const router = useRouter();
-//   const supabase = getSupabaseBrowserClient(); // ✅ Fixed usage
-//   const [state, setState] = useState(INITIAL_STATE);
-//   const [mounted, setMounted] = useState(false);
-
-//   // Check existing session on mount
-//   useEffect(() => {
-//     setMounted(true);
-//     checkExistingSession();
-//   }, []);
-
-//   const checkExistingSession = async () => {
-//     try {
-//       const { data: { session } } = await supabase.auth.getSession();
-      
-//       if (session) {
-//         const { data: profile } = await supabase
-//           .from('profiles')
-//           .select('id')
-//           .eq('user_id', session.user.id)
-//           .maybeSingle();
-
-//         if (!profile) {
-//           router.push('/dashboard');
-//         }
-//       }
-//     } catch (error) {
-//       console.error("Session check failed:", error);
-//     }
-//   };
-
-//   const updateState = (updates) => {
-//     setState(prev => ({ ...prev, ...updates }));
-//   };
-
-//   const handleGoogleLogin = async () => {
-//     updateState({ isLoading: true, error: null });
-    
-//     try {
-//       const { error } = await supabase.auth.signInWithOAuth({
-//         provider: "google",
-//         options: {
-//           redirectTo: `${window.location.origin}/auth/callback`,
-//           queryParams: {
-//             access_type: 'offline',
-//             prompt: 'consent',
-//           },
-//         },
-//       });
-
-//       if (error) throw error;
-      
-//     } catch (error) {
-//       updateState({ 
-//         error: error instanceof Error ? error.message : "Google login failed", 
-//         isLoading: false 
-//       });
-//     }
-//   };
-
-//   const handleLogin = async (e) => {
-//     e.preventDefault();
-//     updateState({ isLoading: true, error: null });
-
-//     try {
-//       let loginEmail = state.email;
-
-//       // Handle Patient ID login
-//       if (state.loginMethod === "patientId") {
-//         const { data: profile, error: profileError } = await supabase
-//           .from('profiles')
-//           .select('email')
-//           .eq('patient_id', state.patientId)
-//           .maybeSingle();
-
-//         if (profileError || !profile) {
-//           throw new Error("Invalid Patient ID. Please check and try again.");
-//         }
-//         loginEmail = profile.email;
-//       }
-
-//       // Attempt sign in
-//       const { error: signInError } = await supabase.auth.signInWithPassword({
-//         email: loginEmail,
-//         password: state.password,
-//       });
-
-//       if (signInError) throw signInError;
-
-//       // Verify user is not a doctor
-//       const { data: { user } } = await supabase.auth.getUser();
-//       const { data: profile } = await supabase
-//         .from('profiles')
-//         .select('id')
-//         .eq('user_id', user.id)
-//         .maybeSingle();
-
-//       if (profile?.role === 'doctor') {
-//         await supabase.auth.signOut();
-//         throw new Error("Please use the doctor login portal");
-//       }
-
-//       // Successful login
-//       router.push('/dashboard');
-//       router.refresh();
-      
-//     } catch (error) {
-//       updateState({ 
-//         error: error instanceof Error ? error.message : "Invalid credentials" 
-//       });
-//     } finally {
-//       updateState({ isLoading: false });
-//     }
-//   };
-
-//   // Don't render until mounted to prevent hydration issues
-//   if (!mounted) {
-//     return null;
-//   }
-
-//   return (
-//     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 p-4">
-//       <Card className="w-full max-w-md shadow-xl border-0">
-//         <CardHeader className="text-center space-y-4">
-//           <div className="flex justify-center">
-//             <div className="p-3 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 shadow-lg">
-//               <Heart className="h-10 w-10 text-primary" strokeWidth={1.5} />
-//             </div>
-//           </div>
-//           <div>
-//             <CardTitle className="text-3xl font-bold tracking-tight">
-//               Welcome Back
-//             </CardTitle>
-//             <CardDescription className="text-base mt-2">
-//               Sign in to access your health records
-//             </CardDescription>
-//           </div>
-//         </CardHeader>
-
-//         <CardContent className="space-y-6">
-//           {/* Google Sign In */}
-//           <div className="space-y-4">
-//             <Button
-//               onClick={handleGoogleLogin}
-//               variant="outline"
-//               size="lg"
-//               className="w-full gap-3 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all duration-200 shadow-sm"
-//               disabled={state.isLoading}
-//             >
-//               <Chrome className="h-5 w-5" />
-//               <span className="font-medium">Continue with Google</span>
-//             </Button>
-
-//             <div className="relative">
-//               <div className="absolute inset-0 flex items-center">
-//                 <span className="w-full border-t" />
-//               </div>
-//               <div className="relative flex justify-center text-xs uppercase">
-//                 <span className="bg-background px-3 text-muted-foreground">
-//                   Or continue with email
-//                 </span>
-//               </div>
-//             </div>
-//           </div>
-
-//           {/* Email/Patient ID Login Form */}
-//           <form onSubmit={handleLogin} className="space-y-5">
-//             {state.error && (
-//               <Alert variant="destructive" className="animate-in fade-in-50 duration-200">
-//                 <AlertDescription className="text-sm">
-//                   {state.error}
-//                 </AlertDescription>
-//               </Alert>
-//             )}
-
-//             <Tabs
-//               value={state.loginMethod}
-//               onValueChange={(value) => updateState({ loginMethod: value })}
-//               className="w-full"
-//             >
-//               <TabsList className="grid w-full grid-cols-2 p-1">
-//                 <TabsTrigger value="email" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-//                   <Mail className="h-4 w-4" />
-//                   Email
-//                 </TabsTrigger>
-//                 <TabsTrigger value="patientId" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-//                   <Fingerprint className="h-4 w-4" />
-//                   Patient ID
-//                 </TabsTrigger>
-//               </TabsList>
-
-//               <TabsContent value="email" className="space-y-4 mt-4">
-//                 <div className="space-y-2">
-//                   <Label htmlFor="email" className="text-sm font-medium">
-//                     Email Address
-//                   </Label>
-//                   <div className="relative">
-//                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-//                     <Input
-//                       id="email"
-//                       type="email"
-//                       placeholder="you@example.com"
-//                       value={state.email}
-//                       onChange={(e) => updateState({ email: e.target.value })}
-//                       className="pl-9 h-11"
-//                       required={state.loginMethod === "email"}
-//                       disabled={state.isLoading}
-//                       autoComplete="email"
-//                     />
-//                   </div>
-//                 </div>
-//               </TabsContent>
-
-//               <TabsContent value="patientId" className="space-y-4 mt-4">
-//                 <div className="space-y-2">
-//                   <Label htmlFor="patientId" className="text-sm font-medium">
-//                     Patient ID
-//                   </Label>
-//                   <div className="relative">
-//                     <Fingerprint className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-//                     <Input
-//                       id="patientId"
-//                       placeholder="Enter 8-digit ID"
-//                       value={state.patientId}
-//                       onChange={(e) => updateState({ patientId: e.target.value.replace(/\D/g, '').slice(0, 8) })}
-//                       maxLength={8}
-//                       className="pl-9 font-mono h-11"
-//                       required={state.loginMethod === "patientId"}
-//                       disabled={state.isLoading}
-//                       autoComplete="off"
-//                     />
-//                   </div>
-//                   <p className="text-xs text-muted-foreground">
-//                     Your unique 8-digit identifier from your profile
-//                   </p>
-//                 </div>
-//               </TabsContent>
-//             </Tabs>
-
-//             <div className="space-y-2">
-//               <div className="flex items-center justify-between">
-//                 <Label htmlFor="password" className="text-sm font-medium">
-//                   Password
-//                 </Label>
-//                 <Link
-//                   href="/auth/forgot-password"
-//                   className="text-xs text-primary hover:underline transition-colors"
-//                 >
-//                   Forgot password?
-//                 </Link>
-//               </div>
-//               <div className="relative">
-//                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-//                 <Input
-//                   id="password"
-//                   type="password"
-//                   placeholder="Enter your password"
-//                   value={state.password}
-//                   onChange={(e) => updateState({ password: e.target.value })}
-//                   className="pl-9 h-11"
-//                   required
-//                   disabled={state.isLoading}
-//                   autoComplete="current-password"
-//                 />
-//               </div>
-//             </div>
-
-//             <Button
-//               type="submit"
-//               size="lg"
-//               className="w-full gap-2 shadow-lg hover:shadow-xl transition-all duration-200"
-//               disabled={state.isLoading}
-//             >
-//               {state.isLoading ? (
-//                 <>
-//                   <Loader2 className="h-4 w-4 animate-spin" />
-//                   Signing in...
-//                 </>
-//               ) : (
-//                 <>
-//                   <Heart className="h-4 w-4" />
-//                   Sign In
-//                 </>
-//               )}
-//             </Button>
-//           </form>
-
-//           {/* Footer Links */}
-//           <div className="space-y-4 pt-2">
-//             <div className="text-center">
-//               <p className="text-sm text-muted-foreground">
-//                 Don't have an account?{" "}
-//                 <Link
-//                   href="/auth/sign-up"
-//                   className="text-primary hover:underline font-medium transition-colors"
-//                 >
-//                   Create an account
-//                 </Link>
-//               </p>
-//             </div>
-
-//             <div className="relative">
-//               <div className="absolute inset-0 flex items-center">
-//                 <span className="w-full border-t" />
-//               </div>
-//               <div className="relative flex justify-center text-xs uppercase">
-//                 <span className="bg-background px-3 text-muted-foreground">
-//                   Healthcare Provider?
-//                 </span>
-//               </div>
-//             </div>
-
-//             <Button
-//               variant="outline"
-//               className="w-full gap-2"
-//               asChild
-//             >
-//               <Link href="/doctor/login">
-//                 <Stethoscope className="h-4 w-4" />
-//                 Doctor Login Portal
-//               </Link>
-//             </Button>
-//           </div>
-//         </CardContent>
-//       </Card>
-//     </div>
-//   );
-// }
 "use client";
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -602,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Heart, Loader2, Mail, Lock, Fingerprint, Stethoscope, Chrome } from "lucide-react";
+import { Loader2, Chrome, Activity, Shield, Clock } from "lucide-react";
 
 const INITIAL_STATE = {
   email: "",
@@ -619,7 +28,6 @@ export default function PatientLoginPage() {
   const [state, setState] = useState(INITIAL_STATE);
   const [mounted, setMounted] = useState(false);
 
-  // Check existing session on mount
   useEffect(() => {
     setMounted(true);
     checkExistingSession();
@@ -630,27 +38,17 @@ export default function PatientLoginPage() {
       const { data: { session } } = await supabase.auth.getSession();
       
       if (session) {
-        // Check user profile
         const { data: profile, error } = await supabase
           .from('profiles')
-          .select('role, is_profile_complete') // Check for required fields
+          .select('role, is_profile_complete')
           .eq('id', session.user.id)  
           .single();
 
         if (!error && profile) {
           if (profile.role === 'doctor') {
-            // Doctor trying to access patient page - sign them out
             await supabase.auth.signOut();
           } else if (profile.role === 'patient') {
-            // Check if profile is complete
-            
-            if (profile.is_profile_complete) {
-              // Existing user with complete profile - go to dashboard
-              router.push('/dashboard');
-            } else {
-              // Existing user with incomplete profile - go to complete profile
-              router.push('/auth/complete-profile');
-            }
+            router.push(profile.is_profile_complete ? '/dashboard' : '/auth/complete-profile');
           }
         }
       }
@@ -679,12 +77,11 @@ export default function PatientLoginPage() {
       });
 
       if (error) throw error;
-      
     } catch (error) {
       updateState({ 
-        error: error instanceof Error ? error.message : "Google login failed", 
-        isLoading: false 
+        error: error instanceof Error ? error.message : "Google login failed" 
       });
+      updateState({ isLoading: false });
     }
   };
 
@@ -695,7 +92,6 @@ export default function PatientLoginPage() {
     try {
       let loginEmail = state.email;
 
-      // Handle Patient ID login
       if (state.loginMethod === "patientId") {
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
@@ -709,74 +105,37 @@ export default function PatientLoginPage() {
         loginEmail = profile.email;
       }
 
-      // First, check if account exists (without logging in)
-      // This prevents "new user" from logging in
       const { data: existingUser, error: signInError } = await supabase.auth.signInWithPassword({
         email: loginEmail,
         password: state.password,
       });
 
-      if (signInError) {
-        // Check if error is because user doesn't exist
-        if (signInError.message.includes('Invalid login credentials')) {
-          // Try to check if email exists in auth system
-          const { data: { users } } = await supabase.auth.admin.listUsers();
-          const userExists = users?.find(u => u.email === loginEmail);
-          
-          if (!userExists) {
-            throw new Error("No account found with this email. Please sign up first.");
-          } else {
-            throw new Error("Invalid password. Please try again.");
-          }
-        }
-        throw signInError;
+      if (signInError) throw signInError;
+
+      if (!existingUser?.user) {
+        throw new Error("Login failed. Please try again.");
       }
 
-      // Get user and check profile
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      
-      if (userError || !user) {
-        throw new Error("Failed to get user information");
-      }
-
-      // Check user profile
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
-        .select('role, full_name, date_of_birth')
-        .eq('id', user.id)
+        .select('role, is_profile_complete')
+        .eq('id', existingUser.user.id)
         .single();
 
-      if (profileError) {
-        console.error("Profile fetch error:", profileError);
-        // Profile doesn't exist - this shouldn't happen if signup worked
-        // But if it does, redirect to complete profile
+      if (profileError || !profile) {
+        throw new Error("Unable to verify your account. Please try a different login method.");
+      }
+
+      if (profile.role === 'doctor') {
+        throw new Error("Please use the doctor login page.");
+      }
+
+      if (profile.is_profile_complete) {
+        router.push('/dashboard');
+        router.refresh();
+      } else {
         router.push('/auth/complete-profile');
         router.refresh();
-        return;
-      }
-
-      // Check if user is a doctor
-      if (profile.role === 'doctor') {
-        await supabase.auth.signOut();
-        throw new Error("Please use the doctor login portal");
-      }
-
-      // Check if user is a patient
-      if (profile.role === 'patient') {
-        // Check if profile is complete
-        const isProfileComplete = profile.full_name && profile.date_of_birth;
-        
-        if (isProfileComplete) {
-          // Existing user with complete profile - go to dashboard
-          router.push('/dashboard');
-          router.refresh();
-        } else {
-          // Existing user with incomplete profile - go to complete profile
-          router.push('/auth/complete-profile');
-          router.refresh();
-        }
-      } else {
-        throw new Error("Invalid user role");
       }
       
     } catch (error) {
@@ -785,224 +144,223 @@ export default function PatientLoginPage() {
       });
       updateState({ isLoading: false });
     } finally {
-      // Only set loading false if not redirected
       setTimeout(() => {
         updateState({ isLoading: false });
       }, 100);
     }
   };
 
-  // Don't render until mounted to prevent hydration issues
   if (!mounted) {
-    return null;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 p-4">
-      <Card className="w-full max-w-md shadow-xl border-0">
-        <CardHeader className="text-center space-y-4">
-          <div className="flex justify-center">
-            <div className="p-3 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 shadow-lg">
-              <Heart className="h-10 w-10 text-primary" strokeWidth={1.5} />
+    <div className="min-h-screen flex lg:flex-row flex-col">
+      <div className="hidden lg:flex lg:w-[45%] relative bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-600 min-h-screen overflow-hidden">
+        <div className="absolute inset-0 opacity-20">
+          <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+            <defs>
+              <pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse">
+                <path d="M 10 0 L 0 0 0 10" fill="none" stroke="white" strokeWidth="0.5"/>
+              </pattern>
+            </defs>
+            <rect width="100" height="100" fill="url(#grid)"/>
+          </svg>
+        </div>
+        
+        {/* Floating medical elements with subtle animation */}
+        <div className="absolute top-32 left-16 w-20 h-20 bg-white/10 rounded-2xl backdrop-blur-sm border border-white/20 animate-pulse-soft" />
+        <div className="absolute bottom-40 right-16 w-24 h-24 bg-white/10 rounded-full blur-2xl" />
+        <div className="absolute top-20 -left-20 w-96 h-96 bg-white/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-20 -right-20 w-80 h-80 bg-white/10 rounded-full blur-3xl" />
+        
+        <div className="relative z-10 flex flex-col justify-between p-12 text-white">
+          <Link href="/" className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-white/20 backdrop-blur-sm">
+              <Activity className="h-6 w-6" />
+            </div>
+            <span className="font-semibold text-xl tracking-tight">HealthTrack</span>
+          </Link>
+          
+          <div className="max-w-md">
+            <div className="w-16 h-1 bg-white/60 rounded-full mb-6" />
+            <h1 className="text-4xl font-semibold mb-5 leading-tight">
+              Your health journey starts here
+            </h1>
+            <p className="text-white/85 text-lg leading-relaxed">
+              Track your vitals, manage medications, and access your medical records — all in one secure place.
+            </p>
+          </div>
+          
+          <div className="flex items-center gap-8 text-sm text-white/70">
+            <div className="flex items-center gap-2.5">
+              <div className="p-1.5 rounded-full bg-white/20">
+                <Shield className="h-3.5 w-3.5" />
+              </div>
+              <span>Secure & Private</span>
+            </div>
+            <div className="flex items-center gap-2.5">
+              <div className="p-1.5 rounded-full bg-white/20">
+                <Clock className="h-3.5 w-3.5" />
+              </div>
+              <span>24/7 Access</span>
             </div>
           </div>
-          <div>
-            <CardTitle className="text-3xl font-bold tracking-tight">
-              Welcome Back
-            </CardTitle>
-            <CardDescription className="text-base mt-2">
-              Sign in to access your health records
-            </CardDescription>
-          </div>
-        </CardHeader>
+        </div>
+      </div>
 
-        <CardContent className="space-y-6">
-          {/* Google Sign In */}
-          <div className="space-y-4">
+      <div className="flex-1 flex items-center justify-center p-6 sm:p-10 lg:p-12 bg-background">
+        <div className="w-full max-w-md">
+          <div className="animate-fade-in">
+            <Link href="/" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-4 lg:hidden">
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+              Home
+            </Link>
+            <Link href="/" className="flex items-center gap-2 mb-10 lg:hidden">
+              <div className="p-2 rounded-lg bg-primary/10">
+                <Activity className="h-5 w-5 text-primary" />
+              </div>
+              <span className="font-semibold text-lg">HealthTrack</span>
+            </Link>
+
+            <div className="mb-8">
+              <h2 className="text-2xl font-semibold text-foreground mb-1.5">Welcome back</h2>
+              <p className="text-muted-foreground">Sign in to continue to your health dashboard</p>
+            </div>
+
             <Button
               onClick={handleGoogleLogin}
               variant="outline"
               size="lg"
-              className="w-full gap-3 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all duration-200 shadow-sm"
+              className="w-full mb-6 h-12 border-border hover:bg-accent transition-all duration-200"
               disabled={state.isLoading}
             >
-              <Chrome className="h-5 w-5" />
-              <span className="font-medium">Continue with Google</span>
+              <Chrome className="h-5 w-5 mr-2.5 text-muted-foreground" />
+              <span className="text-muted-foreground">Continue with Google</span>
             </Button>
 
-            <div className="relative">
+            <div className="relative mb-6">
               <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t" />
+                <span className="w-full border-t border-border" />
               </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-3 text-muted-foreground">
-                  Or continue with email
-                </span>
+              <div className="relative flex justify-center text-sm">
+                <span className="bg-background px-4 text-muted-foreground text-sm">or continue with email</span>
               </div>
             </div>
-          </div>
 
-          {/* Email/Patient ID Login Form */}
-          <form onSubmit={handleLogin} className="space-y-5">
             {state.error && (
-              <Alert variant="destructive" className="animate-in fade-in-50 duration-200">
-                <AlertDescription className="text-sm">
-                  {state.error}
-                </AlertDescription>
+              <Alert variant="destructive" className="mb-6 animate-fade-in-up">
+                <AlertDescription>{state.error}</AlertDescription>
               </Alert>
             )}
 
-            <Tabs
-              value={state.loginMethod}
-              onValueChange={(value) => updateState({ loginMethod: value })}
-              className="w-full"
-            >
-              <TabsList className="grid w-full grid-cols-2 p-1">
-                <TabsTrigger value="email" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                  <Mail className="h-4 w-4" />
+            <Tabs value={state.loginMethod} onValueChange={(v) => updateState({ loginMethod: v })} className="mb-6">
+              <TabsList className="grid w-full grid-cols-2 mb-4 bg-muted p-1">
+                <TabsTrigger 
+                  value="email" 
+                  className="data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all duration-200"
+                >
                   Email
                 </TabsTrigger>
-                <TabsTrigger value="patientId" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                  <Fingerprint className="h-4 w-4" />
+                <TabsTrigger 
+                  value="patientId"
+                  className="data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all duration-200"
+                >
                   Patient ID
                 </TabsTrigger>
               </TabsList>
-
-              <TabsContent value="email" className="space-y-4 mt-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email" className="text-sm font-medium">
-                    Email Address
-                  </Label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              
+              <TabsContent value="email" className="animate-fade-in-up">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="email" className="text-sm font-medium">Email address</Label>
                     <Input
                       id="email"
                       type="email"
-                      placeholder="you@example.com"
+                      placeholder="name@example.com"
                       value={state.email}
                       onChange={(e) => updateState({ email: e.target.value })}
-                      className="pl-9 h-11"
-                      required={state.loginMethod === "email"}
-                      disabled={state.isLoading}
-                      autoComplete="email"
+                      className="h-11 bg-background border-border focus:ring-primary/20"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="password" className="text-sm font-medium">Password</Label>
+                      <Link href="/auth/verify" className="text-sm text-primary hover:underline">
+                        Forgot password?
+                      </Link>
+                    </div>
+                    <Input
+                      id="password"
+                      type="password"
+                      value={state.password}
+                      onChange={(e) => updateState({ password: e.target.value })}
+                      className="h-11 bg-background border-border focus:ring-primary/20"
+                      required
                     />
                   </div>
                 </div>
               </TabsContent>
-
-              <TabsContent value="patientId" className="space-y-4 mt-4">
-                <div className="space-y-2">
-                  <Label htmlFor="patientId" className="text-sm font-medium">
-                    Patient ID
-                  </Label>
-                  <div className="relative">
-                    <Fingerprint className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              
+              <TabsContent value="patientId" className="animate-fade-in-up">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="patientId" className="text-sm font-medium">Patient ID</Label>
                     <Input
                       id="patientId"
-                      placeholder="Enter 8-digit ID"
+                      type="text"
+                      placeholder="Enter your Patient ID"
                       value={state.patientId}
-                      onChange={(e) => updateState({ patientId: e.target.value.replace(/\D/g, '').slice(0, 8) })}
-                      maxLength={8}
-                      className="pl-9 font-mono h-11"
-                      required={state.loginMethod === "patientId"}
-                      disabled={state.isLoading}
-                      autoComplete="off"
+                      onChange={(e) => updateState({ patientId: e.target.value })}
+                      className="h-11 bg-background border-border focus:ring-primary/20"
+                      required
                     />
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    Your unique 8-digit identifier from your profile
-                  </p>
+                  <div className="space-y-2">
+                    <Label htmlFor="patientPassword" className="text-sm font-medium">Password</Label>
+                    <Input
+                      id="patientPassword"
+                      type="password"
+                      value={state.password}
+                      onChange={(e) => updateState({ password: e.target.value })}
+                      className="h-11 bg-background border-border focus:ring-primary/20"
+                      required
+                    />
+                  </div>
                 </div>
               </TabsContent>
             </Tabs>
 
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="password" className="text-sm font-medium">
-                  Password
-                </Label>
-                <Link
-                  href="/auth/forgot-password"
-                  className="text-xs text-primary hover:underline transition-colors"
-                >
-                  Forgot password?
-                </Link>
-              </div>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="Enter your password"
-                  value={state.password}
-                  onChange={(e) => updateState({ password: e.target.value })}
-                  className="pl-9 h-11"
-                  required
-                  disabled={state.isLoading}
-                  autoComplete="current-password"
-                />
-              </div>
-            </div>
-
-            <Button
-              type="submit"
+            <Button 
+              onClick={handleLogin}
+              className="w-full mb-6 h-11 bg-primary hover:bg-primary/90 transition-all duration-200"
               size="lg"
-              className="w-full gap-2 shadow-lg hover:shadow-xl transition-all duration-200"
               disabled={state.isLoading}
             >
               {state.isLoading ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   Signing in...
                 </>
               ) : (
-                <>
-                  <Heart className="h-4 w-4" />
-                  Sign In
-                </>
+                "Sign in"
               )}
             </Button>
-          </form>
 
-          {/* Sign Up Link - Important for new users */}
-          <div className="text-center pt-2">
-            <p className="text-sm text-muted-foreground">
+            <p className="text-center text-sm text-muted-foreground">
               Don't have an account?{" "}
-              <Link
-                href="/auth/sign-up"
-                className="text-primary hover:underline font-semibold transition-colors"
-              >
-                Sign up here
+              <Link href="/auth/sign-up" className="text-primary hover:underline font-medium">
+                Create one
               </Link>
             </p>
           </div>
-
-          {/* Footer Links */}
-          <div className="space-y-4 pt-2">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-3 text-muted-foreground">
-                  Healthcare Provider?
-                </span>
-              </div>
-            </div>
-
-            <Button
-              variant="outline"
-              className="w-full gap-2"
-              asChild
-            >
-              <Link href="/doctor/login">
-                <Stethoscope className="h-4 w-4" />
-                Doctor Login Portal
-              </Link>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }

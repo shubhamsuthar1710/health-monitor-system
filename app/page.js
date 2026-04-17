@@ -1,192 +1,297 @@
-// In your header/navigation component
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { Activity, Heart, Shield, Clock, FileText, Pill, ArrowRight, CheckCircle2, Stethoscope } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { 
+  Activity, 
+  Heart, 
+  Shield, 
+  Clock, 
+  FileText, 
+  Pill, 
+  ArrowRight,
+  Stethoscope,
+  Brain,
+  AlertCircle,
+  Users,
+  CheckCircle
+} from "lucide-react";
 
-export default function HomePage() {
-    return __awaiter(this, void 0, void 0, function* () {
-        const supabase = yield getSupabaseServerClient();
-        const { data: { user } } = yield supabase.auth.getUser();
+const features = [
+  { icon: Activity, title: "Health Tracking", desc: "Track vitals, weight, blood pressure & more" },
+  { icon: Pill, title: "Medications", desc: "Manage dosages & schedules" },
+  { icon: FileText, title: "Documents", desc: "Store medical records securely" },
+  { icon: Shield, title: "Emergency Card", desc: "Critical info when you need it" },
+  { icon: Brain, title: "Medical History", desc: "Allergies, conditions & family history" },
+  { icon: Clock, title: "Quick Entries", desc: "Log measurements in seconds" },
+];
+
+const stats = [
+  { value: "10K+", label: "Users" },
+  { value: "50K+", label: "Records" },
+  { value: "99.9%", label: "Uptime" },
+];
+
+const benefits = [
+  "Secure & private health management",
+  "Easy medication tracking",
+  "Emergency information access",
+  "Doctor sharing made simple",
+];
+
+export default async function HomePage() {
+  const supabase = await getSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (user) {
+    const { data: doctor } = await supabase
+      .from('doctors')
+      .select('verification_status')
+      .eq('user_id', user.id)
+      .single();
+
+    if (doctor) {
+      redirect(doctor.verification_status === 'verified' ? "/doctor/dashboard" : "/doctor/pending");
+    } else {
+      redirect("/dashboard");
+    }
+  }
+
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="border-b bg-background/80 backdrop-blur-sm sticky top-0 z-50">
+        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-2">
+            <div className="p-2 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5">
+              <Activity className="h-5 w-5 text-primary" />
+            </div>
+            <span className="font-semibold text-lg">HealthTrack</span>
+          </Link>
+          
+          <nav className="flex items-center gap-2 sm:gap-4">
+            <Button variant="ghost" size="sm" asChild className="hidden sm:flex gap-2">
+              <Link href="/doctor/signup">
+                <Stethoscope className="h-4 w-4" />
+                For Doctors
+              </Link>
+            </Button>
+            <Button variant="ghost" size="sm" asChild>
+              <Link href="/auth/login">Login</Link>
+            </Button>
+            <Button asChild>
+              <Link href="/auth/sign-up">Get Started</Link>
+            </Button>
+          </nav>
+        </div>
+      </header>
+
+      {/* Hero Section with Human-Centric Visuals */}
+      <section className="relative py-16 sm:py-24 lg:py-28 overflow-hidden">
+        {/* Background subtle pattern */}
+        <div className="absolute inset-0 opacity-50">
+          <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+            <defs>
+              <pattern id="hero-pattern" width="40" height="40" patternUnits="userSpaceOnUse">
+                <circle cx="20" cy="20" r="1.5" fill="currentColor" className="text-primary/10"/>
+              </pattern>
+            </defs>
+            <rect width="100" height="100" fill="url(#hero-pattern)"/>
+          </svg>
+        </div>
         
-        if (user) {
-            // Check if user is doctor or patient and redirect accordingly
-            const { data: doctor } = yield supabase
-                .from('doctors')
-                .select('verification_status')
-                .eq('user_id', user.id)
-                .single();
+        <div className="container mx-auto px-4 relative">
+          <div className="grid lg:grid-cols-2 gap-10 lg:gap-12 items-center">
+            {/* Left: Text */}
+            <div className="text-center lg:text-left">
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-gradient-to-r from-primary/15 to-primary/5 text-primary text-sm font-medium mb-6 animate-fade-in">
+                <Heart className="h-4 w-4 fill-current" />
+                Your Health, Your Control
+              </div>
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight mb-6 animate-fade-in-up">
+                Track Your Health, <span className="text-primary">Simplified</span>
+              </h1>
+              <p className="text-lg sm:text-xl text-muted-foreground mb-8 max-w-lg mx-auto lg:mx-0 animate-fade-in-up animation-delay-100">
+                Monitor vitals, manage medications, store records, and keep emergency 
+                information at your fingertips. All in one secure platform.
+              </p>
+              <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3 mb-8 animate-fade-in-up animation-delay-200">
+                <Button size="lg" asChild className="gap-2 w-full sm:w-auto bg-primary hover:bg-primary/90 transition-all">
+                  <Link href="/auth/sign-up">
+                    Start Free
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </Button>
+                <Button size="lg" variant="outline" asChild className="w-full sm:w-auto border-border hover:bg-accent transition-all">
+                  <Link href="/auth/login">Sign In</Link>
+                </Button>
+              </div>
+              <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 text-sm text-muted-foreground animate-fade-in-up animation-delay-300">
+                {benefits.slice(0, 2).map((benefit, i) => (
+                  <div key={i} className="flex items-center gap-1.5">
+                    <CheckCircle className="h-4 w-4 text-emerald-500" />
+                    <span>{benefit}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            {/* Right: Healthcare Image */}
+            <div className="relative hidden lg:block animate-fade-in-scale animation-delay-200">
+              <div className="relative aspect-square max-w-lg mx-auto">
+                {/* Soft gradient overlay */}
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-emerald-5/10 rounded-3xl" />
+                
+                {/* Main image */}
+                <div className="relative h-full w-full rounded-3xl overflow-hidden shadow-2xl">
+                  <Image
+                    src="/hero-healthcare.svg"
+                    alt="Health tracking dashboard"
+                    fill
+                    className="object-contain p-8"
+                    priority
+                  />
+                </div>
+                
+                {/* Decorative elements */}
+                <div className="absolute -top-4 -right-4 w-24 h-24 bg-primary/10 rounded-full blur-2xl" />
+                <div className="absolute -bottom-6 -left-6 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
-            if (doctor) {
-                if (doctor.verification_status === 'verified') {
-                    redirect("/doctor/dashboard");
-                } else {
-                    redirect("/doctor/pending");
-                }
-            } else {
-                redirect("/dashboard");
-            }
-        }
+      {/* Stats */}
+      <section className="py-12 bg-gradient-to-r from-muted/20 via-muted/10 to-muted/20">
+        <div className="container mx-auto px-4">
+          <div className="flex flex-wrap justify-center gap-8 sm:gap-16">
+            {stats.map((stat, i) => (
+              <div key={i} className="text-center animate-fade-in-up" style={{ animationDelay: `${i * 100}ms` }}>
+                <p className="text-3xl sm:text-4xl font-bold text-primary">{stat.value}</p>
+                <p className="text-sm text-muted-foreground">{stat.label}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
-        return (_jsxs("div", { className: "min-h-screen bg-background", children: [
-            _jsx("header", { className: "border-b border-border", children: 
-                _jsxs("div", { className: "container mx-auto px-4 py-4 flex items-center justify-between", children: [
-                    _jsxs("div", { className: "flex items-center gap-3", children: [
-                        _jsx("div", { className: "p-2 rounded-lg bg-primary/10", children: 
-                            _jsx(Activity, { className: "h-6 w-6 text-primary" }) 
-                        }),
-                        _jsx("span", { className: "font-semibold text-lg", children: "HealthTrack" })
-                    ] }),
-                    
-                    _jsxs("div", { className: "flex items-center gap-3", children: [
-                        // Doctor Registration Link - ADD THIS LINE
-                        _jsx(Button, { variant: "ghost", size: "sm", asChild: true, className: "hidden sm:flex gap-2", children: 
-                            _jsxs(Link, { href: "/doctor/signup", children: [
-                                _jsx(Stethoscope, { className: "h-4 w-4" }),
-                                "For Doctors"
-                            ] })
-                        }),
-                        
-                        _jsx(Button, { variant: "ghost", asChild: true, children: 
-                            _jsx(Link, { href: "/auth/login", children: "login" })
-                        }),
-                        
-                        _jsx(Button, { asChild: true, children: 
-                            _jsx(Link, { href: "/auth/sign-up", children: "Get Started" })
-                        })
-                    ] })
-                ] })
-            }),
+      {/* Features with Cards */}
+      <section className="py-16 sm:py-20">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-12">
+            <h2 className="text-2xl sm:text-3xl font-bold mb-3">Everything You Need</h2>
+            <p className="text-muted-foreground text-center max-w-xl mx-auto">
+              Comprehensive health monitoring tools designed to help you stay on top of your wellbeing.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 max-w-5xl mx-auto">
+            {features.map((feature, i) => (
+              <Card 
+                key={i} 
+                className="hover:shadow-lg hover:border-primary/20 transition-all duration-300 group border-border/60"
+                style={{ animationDelay: `${i * 50}ms` }}
+              >
+                <CardContent className="p-5 flex items-start gap-4">
+                  <div className="p-2.5 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 group-hover:from-primary/20 group-hover:to-primary/10 transition-all">
+                    <feature.icon className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold mb-1">{feature.title}</h3>
+                    <p className="text-sm text-muted-foreground">{feature.desc}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
 
-            _jsx("section", { className: "py-20 lg:py-32", children: 
-                _jsx("div", { className: "container mx-auto px-4", children: 
-                    _jsxs("div", { className: "max-w-3xl mx-auto text-center", children: [
-                        _jsxs("div", { className: "inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium mb-6", children: [
-                            _jsx(Heart, { className: "h-4 w-4" }),
-                            "Your Health, Your Control"
-                        ] }),
-                        _jsx("h1", { className: "text-4xl lg:text-6xl font-bold tracking-tight text-foreground mb-6 text-balance", children: "Take Charge of Your Health Journey" }),
-                        _jsx("p", { className: "text-xl text-muted-foreground mb-8 text-pretty", children: "Track your vitals, manage medications, store medical records, and keep emergency information at your fingertips. All in one secure, private platform." }),
-                        _jsxs("div", { className: "flex flex-col sm:flex-row items-center justify-center gap-4", children: [
-                            _jsx(Button, { size: "lg", asChild: true, className: "gap-2", children: 
-                                _jsxs(Link, { href: "/auth/sign-up", children: ["Start Free Today", _jsx(ArrowRight, { className: "h-4 w-4" })] })
-                            }),
-                            _jsx(Button, { size: "lg", variant: "outline", asChild: true, children: 
-                                _jsx(Link, { href: "/auth/login", children: "Sign In" })
-                            })
-                        ] })
-                    ] })
-                })
-            }),
+      {/* How It Works */}
+      <section className="py-16 sm:py-20 bg-gradient-to-b from-muted/20 to-background">
+        <div className="container mx-auto px-4">
+          <h2 className="text-2xl sm:text-3xl font-bold text-center mb-12">How It Works</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 max-w-4xl mx-auto">
+            {[
+              { num: "1", title: "Create Account", desc: "Sign up in seconds with Google or email" },
+              { num: "2", title: "Complete Profile", desc: "Add your medical information" },
+              { num: "3", title: "Start Tracking", desc: "Log vitals and monitor health" },
+            ].map((step, i) => (
+              <div key={i} className="text-center group">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mx-auto mb-4 group-hover:from-primary/30 group-hover:to-primary/10 transition-all">
+                  <span className="text-xl font-bold text-primary">{step.num}</span>
+                </div>
+                <h3 className="font-semibold mb-2">{step.title}</h3>
+                <p className="text-sm text-muted-foreground">{step.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
-            _jsx("section", { className: "py-20 bg-muted/50", children: 
-                _jsxs("div", { className: "container mx-auto px-4", children: [
-                    _jsxs("div", { className: "text-center mb-12", children: [
-                        _jsx("h2", { className: "text-3xl font-bold mb-4", children: "Everything You Need" }),
-                        _jsx("p", { className: "text-muted-foreground max-w-2xl mx-auto", children: "Comprehensive health monitoring tools designed to help you stay on top of your wellbeing" })
-                    ] }),
-                    _jsxs("div", { className: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6", children: [
-                        _jsx(FeatureCard, { icon: Activity, title: "Health Timeline", description: "Track blood pressure, heart rate, blood sugar, weight, and more. See trends over time." }),
-                        _jsx(FeatureCard, { icon: Pill, title: "Medication Management", description: "Keep track of all your medications, dosages, and schedules in one place." }),
-                        _jsx(FeatureCard, { icon: FileText, title: "Document Storage", description: "Store and organize lab results, prescriptions, and medical records securely." }),
-                        _jsx(FeatureCard, { icon: Shield, title: "Emergency Card", description: "Digital emergency card with critical health info accessible when you need it most." }),
-                        _jsx(FeatureCard, { icon: Heart, title: "Medical Profile", description: "Track allergies, chronic conditions, and family medical history." }),
-                        _jsx(FeatureCard, { icon: Clock, title: "Quick Entries", description: "Log health measurements in seconds with our streamlined quick-entry system." })
-                    ] })
-                ] })
-            }),
+      {/* Doctors CTA with Visual */}
+      <section className="py-16 sm:py-20">
+        <div className="container mx-auto px-4">
+          <Card className="max-w-2xl mx-auto overflow-hidden border-0 shadow-xl">
+            <div className="relative aspect-[16/9] sm:aspect-video bg-gradient-to-br from-primary/10 via-emerald-5/20 to-primary/5">
+              <Image
+                src="/doctor-illustration.svg"
+                alt="Doctor consultation"
+                fill
+                className="object-contain p-8"
+              />
+              {/* Soft overlay */}
+              <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-background/20 to-transparent" />
+            </div>
+            <CardContent className="p-8 text-center -mt-10 relative">
+              <div className="p-4 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 w-fit mx-auto mb-4">
+                <Stethoscope className="h-8 w-8 text-primary" />
+              </div>
+              <h3 className="text-xl sm:text-2xl font-semibold mb-3">Healthcare Provider?</h3>
+              <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+                Register to securely access patient records and provide better care to your patients.
+              </p>
+              <div className="flex justify-center">
+                <Button asChild size="lg" className="gap-2 bg-primary hover:bg-primary/90 transition-all">
+                  <Link href="/doctor/signup">
+                    Register as Doctor
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </section>
 
-            _jsx("section", { className: "py-20", children: 
-                _jsx("div", { className: "container mx-auto px-4", children: 
-                    _jsxs("div", { className: "max-w-4xl mx-auto", children: [
-                        _jsx("div", { className: "text-center mb-12", children: 
-                            _jsx("h2", { className: "text-3xl font-bold mb-4", children: "Why HealthTrack?" })
-                        }),
-                        _jsxs("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-6", children: [
-                            _jsx(BenefitItem, { text: "Secure and private - your health data stays yours" }),
-                            _jsx(BenefitItem, { text: "Access from anywhere, anytime" }),
-                            _jsx(BenefitItem, { text: "Share emergency info with healthcare providers" }),
-                            _jsx(BenefitItem, { text: "Track trends and patterns in your health" }),
-                            _jsx(BenefitItem, { text: "Never forget medication details again" }),
-                            _jsx(BenefitItem, { text: "All your medical documents in one place" })
-                        ] })
-                    ] })
-                })
-            }),
+      {/* Trust Banner */}
+      <section className="py-10 bg-muted/30">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-center gap-2 text-muted-foreground">
+            <Shield className="h-4 w-4 text-primary" />
+            <span className="text-sm">Your data is secure and private. HIPAA compliant platform.</span>
+          </div>
+        </div>
+      </section>
 
-            // New section for healthcare providers
-            _jsx("section", { className: "py-16 bg-primary/5", children: 
-                _jsxs("div", { className: "container mx-auto px-4 text-center", children: [
-                    _jsx("div", { className: "p-3 rounded-full bg-primary/10 w-fit mx-auto mb-6", children: 
-                        _jsx(Stethoscope, { className: "h-8 w-8 text-primary" })
-                    }),
-                    _jsx("h2", { className: "text-3xl font-bold mb-4", children: "Are You a Healthcare Provider?" }),
-                    _jsx("p", { className: "text-muted-foreground mb-8 max-w-2xl mx-auto", children: "Register as a doctor to securely access patient records, review medical history, and provide better care with complete context." }),
-                    _jsxs("div", { className: "flex flex-col sm:flex-row items-center justify-center gap-4", children: [
-                        _jsx(Button, { size: "lg", variant: "default", asChild: true, className: "gap-2", children: 
-                            _jsxs(Link, { href: "/doctor/signup", children: ["Register as Doctor", _jsx(ArrowRight, { className: "h-4 w-4" })] })
-                        }),
-                        _jsx(Button, { size: "lg", variant: "outline", asChild: true, children: 
-                            _jsx(Link, { href: "/auth/login", children: "Doctor Sign In" })
-                        })
-                    ] })
-                ] })
-            }),
-
-            _jsx("section", { className: "py-20 bg-primary/5", children: 
-                _jsxs("div", { className: "container mx-auto px-4 text-center", children: [
-                    _jsx("h2", { className: "text-3xl font-bold mb-4", children: "Ready to Take Control?" }),
-                    _jsx("p", { className: "text-muted-foreground mb-8 max-w-xl mx-auto", children: "Join thousands of users who are already managing their health more effectively with HealthTrack." }),
-                    _jsx(Button, { size: "lg", asChild: true, className: "gap-2", children: 
-                        _jsxs(Link, { href: "/auth/sign-up", children: ["Create Your Free Account", _jsx(ArrowRight, { className: "h-4 w-4" })] })
-                    })
-                ] })
-            }),
-
-            _jsx("footer", { className: "py-8 border-t border-border", children: 
-                _jsx("div", { className: "container mx-auto px-4", children: 
-                    _jsxs("div", { className: "flex flex-col sm:flex-row items-center justify-between gap-4", children: [
-                        _jsxs("div", { className: "flex items-center gap-2 text-muted-foreground", children: [
-                            _jsx(Activity, { className: "h-5 w-5" }),
-                            _jsx("span", { className: "font-medium", children: "HealthTrack" })
-                        ] }),
-                        _jsxs("div", { className: "flex items-center gap-4 text-sm text-muted-foreground", children: [
-                            _jsx(Link, { href: "/privacy", className: "hover:text-foreground", children: "Privacy" }),
-                            _jsx(Link, { href: "/terms", className: "hover:text-foreground", children: "Terms" }),
-                            _jsx(Link, { href: "/contact", className: "hover:text-foreground", children: "Contact" }),
-                            _jsx("span", { children: "© 2024 HealthTrack" })
-                        ] })
-                    ] })
-                })
-            })
-        ] }));
-    });
-}
-
-function FeatureCard({ icon: Icon, title, description }) {
-    return (_jsxs("div", { className: "p-6 rounded-xl bg-background border border-border hover:shadow-md transition-shadow", children: [
-        _jsx("div", { className: "p-3 rounded-lg bg-primary/10 w-fit mb-4", children: 
-            _jsx(Icon, { className: "h-6 w-6 text-primary" })
-        }),
-        _jsx("h3", { className: "font-semibold text-lg mb-2", children: title }),
-        _jsx("p", { className: "text-muted-foreground text-sm", children: description })
-    ] }));
-}
-
-function BenefitItem({ text }) {
-    return (_jsxs("div", { className: "flex items-center gap-3", children: [
-        _jsx(CheckCircle2, { className: "h-5 w-5 text-primary flex-shrink-0" }),
-        _jsx("span", { children: text })
-    ] }));
+      {/* Footer */}
+      <footer className="py-8 border-t">
+        <div className="container mx-auto px-4">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <Activity className="h-4 w-4 text-primary" />
+              <span className="font-medium">HealthTrack</span>
+            </div>
+            <div className="flex items-center gap-4">
+              <Link href="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
+              <Link href="/terms" className="hover:text-foreground transition-colors">Terms</Link>
+              <span>© 2024</span>
+            </div>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
 }

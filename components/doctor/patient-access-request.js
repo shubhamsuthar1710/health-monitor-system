@@ -1,131 +1,105 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Fingerprint, Mail } from "lucide-react";
+import { Loader2, Fingerprint, Mail, CheckCircle2, AlertCircle } from "lucide-react";
 
-export function PatientAccessRequest() {
+export function PatientAccessRequest({ onSuccess, doctorId }) {
   const [patientId, setPatientId] = useState("");
-  const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [otpSent, setOtpSent] = useState(false);
-  const router = useRouter();
-
-  const generateOTP = () => {
-    return Math.floor(100000 + Math.random() * 900000).toString();
-  };
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
+  const [patientInfo, setPatientInfo] = useState(null);
+  
+  const supabase = getSupabaseBrowserClient();
 
   const handleRequestAccess = async (e) => {
     e.preventDefault();
     setError(null);
+    setSuccess(null);
+    setPatientInfo(null);
     setIsLoading(true);
 
     try {
-      const supabase = getSupabaseBrowserClient();
+      // 1. Validate patient ID format
+      if (!patientId || patientId.length !== 8 || !/^\d{8}$/.test(patientId)) {
+        throw new Error("Please enter a valid 8-digit Patient ID");
+      }
 
-      // 1. Verify patient exists
+      // 2. Find patient by ID
       const { data: patient, error: patientError } = await supabase
         .from('profiles')
-        .select('id, email, full_name')
+        .select('id, email, full_name, date_of_birth, blood_type')
         .eq('patient_id', patientId)
         .single();
 
       if (patientError || !patient) {
-        setError("Patient not found. Please check the ID and try again.");
-        return;
+        throw new Error("No patient found with this ID");
       }
 
-      // 2. Get current doctor
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      const { data: doctor, error: doctorError } = await supabase
-        .from('doctors')
-        .select('id, full_name')
-        .eq('user_id', user.id)
-        .single();
-
-      if (doctorError || !doctor) {
-        setError("Doctor profile not found. Please complete registration.");
-        return;
-      }
-
-      // 3. Check if doctor is verified
-      const { data: verification } = await supabase
-        .from('doctors')
-        .select('verification_status')
-        .eq('user_id', user.id)
-        .single();
-
-      if (verification?.verification_status !== 'verified') {
-        setError("Your account is pending verification. You cannot access patient records yet.");
-        return;
-      }
-
-      // 4. Generate OTP and expiry (20 minutes)
-      const otp = generateOTP();
+      // 3. Check rate limit (optional - add to database)
+      // 4. Generate OTP
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
       const expiresAt = new Date();
       expiresAt.setMinutes(expiresAt.getMinutes() + 20);
 
-      // 5. Store access request (reusing your edit_confirmations pattern)
-      const { error: requestError } = await supabase
+      // 5. Store access request
+      const { data: request, error: requestError } = await supabase
         .from('access_requests')
         .insert({
-          doctor_id: doctor.id,
+          doctor_id: doctorId,
           patient_id: patient.id,
           patient_patient_id: patientId,
           otp_code: otp,
           otp_expires_at: expiresAt.toISOString(),
           status: 'pending'
-        });
+        })
+        .select()
+        .single();
 
-      if (requestError) {
-        // If table doesn't exist, create it via migration
-        console.error("Access request error:", requestError);
-        setError("Access request system not fully configured.");
-        return;
-      }
+      if (requestError) throw requestError;
 
-      // 6. Send OTP via email (using your existing email system)
-      const response = await fetch('/api/send-doctor-otp', {
+      // 6. Send OTP via email (call API route)
+      const emailResponse = await fetch('/api/doctor/send-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           patientEmail: patient.email,
           patientName: patient.full_name,
-          doctorName: doctor.full_name,
-          otp: otp
+          otp: otp,
+          expiresIn: 20
         }),
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to send OTP email');
+      if (!emailResponse.ok) {
+        throw new Error("Failed to send OTP email");
       }
 
-      // 7. Store session info and redirect
-      sessionStorage.setItem('pendingAccess', JSON.stringify({
+      // 7. Store request info in session storage for OTP verification
+      sessionStorage.setItem('pendingAccessRequest', JSON.stringify({
+        requestId: request.id,
         patientId: patient.id,
         patientName: patient.full_name,
-        doctorId: doctor.id,
-        patientIdNumber: patientId,
+        patientEmail: patient.email,
+        patientInfo: patient,
         expiresAt: expiresAt.toISOString()
       }));
 
-      setOtpSent(true);
+      setPatientInfo(patient);
+      setSuccess(`OTP sent to ${patient.email}. Please ask the patient for the 6-digit code.`);
       
-      // Redirect to OTP verification page
-      setTimeout(() => {
-        router.push('/doctor/access/verify-otp');
-      }, 1500);
-
+      if (onSuccess) {
+        onSuccess({ requestId: request.id, patient });
+      }
+      
     } catch (error) {
       console.error("Access request error:", error);
-      setError(error.message || "Failed to request access. Please try again.");
+      setError(error.message);
     } finally {
       setIsLoading(false);
     }
@@ -135,7 +109,7 @@ export function PatientAccessRequest() {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Fingerprint className="h-5 w-5" />
+          <Fingerprint className="h-5 w-5 text-primary" />
           Access Patient Records
         </CardTitle>
         <CardDescription>
@@ -143,52 +117,63 @@ export function PatientAccessRequest() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {otpSent ? (
-          <div className="text-center py-4">
-            <Mail className="h-12 w-12 text-primary mx-auto mb-3" />
-            <h3 className="font-medium">OTP Sent!</h3>
-            <p className="text-sm text-muted-foreground mt-1">
-              Redirecting to verification page...
-            </p>
-          </div>
-        ) : (
-          <form onSubmit={handleRequestAccess} className="space-y-4">
-            {error && (
-              <Alert variant="destructive">
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
-            
-            <div className="space-y-2">
-              <Label htmlFor="patientId">Patient ID</Label>
+        <form onSubmit={handleRequestAccess} className="space-y-4">
+          {error && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+          
+          {success && (
+            <Alert className="bg-green-50 border-green-200">
+              <CheckCircle2 className="h-4 w-4 text-green-600" />
+              <AlertDescription className="text-green-700">{success}</AlertDescription>
+            </Alert>
+          )}
+
+          <div className="space-y-2">
+            <Label htmlFor="patientId">Patient ID</Label>
+            <div className="relative">
+              <Fingerprint className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 id="patientId"
-                placeholder="Enter 8-digit ID (e.g., 12345678)"
+                placeholder="Enter 8-digit ID (e.g., 10000001)"
                 value={patientId}
-                onChange={(e) => setPatientId(e.target.value)}
+                onChange={(e) => setPatientId(e.target.value.replace(/\D/g, '').slice(0, 8))}
                 maxLength={8}
-                pattern="\d{8}"
+                className="pl-9 font-mono text-lg"
                 required
                 disabled={isLoading}
-                className="text-center text-lg font-mono"
               />
-              <p className="text-xs text-muted-foreground">
-                Patient ID is an 8-digit number displayed on their profile
-              </p>
             </div>
+            <p className="text-xs text-muted-foreground">
+              The patient ID is displayed on the patient's profile card
+            </p>
+          </div>
 
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Verifying...
-                </>
-              ) : (
-                "Request Access"
-              )}
-            </Button>
-          </form>
-        )}
+          {patientInfo && (
+            <div className="bg-muted/50 p-3 rounded-lg">
+              <p className="text-sm font-medium">Patient Found:</p>
+              <p className="text-sm">{patientInfo.full_name}</p>
+              <p className="text-xs text-muted-foreground">{patientInfo.email}</p>
+            </div>
+          )}
+
+          <Button type="submit" className="w-full" disabled={isLoading}>
+            {isLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Sending OTP...
+              </>
+            ) : (
+              <>
+                <Mail className="mr-2 h-4 w-4" />
+                Request Access & Send OTP
+              </>
+            )}
+          </Button>
+        </form>
       </CardContent>
     </Card>
   );
