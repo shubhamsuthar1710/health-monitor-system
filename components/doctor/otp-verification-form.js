@@ -8,43 +8,25 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Clock, CheckCircle } from "lucide-react";
+import { Loader2, Key, CheckCircle2, AlertCircle, Clock } from "lucide-react";
 
-export function OTPVerification() {
+export function OTPVerification({ requestId, patientId, patientName, onVerify, onCancel }) {
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
-  const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
   const [timeLeft, setTimeLeft] = useState(1200); // 20 minutes in seconds
-  const [pendingAccess, setPendingAccess] = useState(null);
+  const [success, setSuccess] = useState(false);
+  
   const router = useRouter();
+  const supabase = getSupabaseBrowserClient();
 
   useEffect(() => {
-    // Get pending access from session storage
-    const stored = sessionStorage.getItem('pendingAccess');
-    if (stored) {
-      const data = JSON.parse(stored);
-      setPendingAccess(data);
-      
-      // Calculate time left
-      const expiresAt = new Date(data.expiresAt);
-      const now = new Date();
-      const secondsLeft = Math.max(0, Math.floor((expiresAt - now) / 1000));
-      setTimeLeft(secondsLeft);
-    } else {
-      router.push('/doctor/access');
-    }
-  }, [router]);
-
-  useEffect(() => {
-    if (timeLeft <= 0) {
-      setError("OTP has expired. Please request a new one.");
-      return;
-    }
-
+    if (timeLeft <= 0) return;
+    
     const timer = setInterval(() => {
-      setTimeLeft(prev => Math.max(0, prev - 1));
+      setTimeLeft(prev => prev - 1);
     }, 1000);
-
+    
     return () => clearInterval(timer);
   }, [timeLeft]);
 
@@ -57,28 +39,33 @@ export function OTPVerification() {
   const handleOtpChange = (index, value) => {
     if (value.length > 1) {
       // Handle paste
-      const pastedOtp = value.slice(0, 6).split('');
+      const pasted = value.slice(0, 6).split('');
       const newOtp = [...otp];
-      pastedOtp.forEach((digit, i) => {
+      pasted.forEach((digit, i) => {
         if (i < 6 && /^\d$/.test(digit)) {
           newOtp[i] = digit;
         }
       });
       setOtp(newOtp);
       
-      // Focus next empty or last input
-      const nextIndex = Math.min(5, pastedOtp.length);
-      const nextInput = document.getElementById(`otp-${nextIndex}`);
-      if (nextInput) nextInput.focus();
+      // Auto-submit if all digits filled
+      if (pasted.length === 6 && pasted.every(d => /^\d$/.test(d))) {
+        setTimeout(() => handleVerify(), 100);
+      }
     } else if (/^\d$/.test(value) || value === "") {
       const newOtp = [...otp];
       newOtp[index] = value;
       setOtp(newOtp);
-
+      
       // Auto-focus next input
       if (value && index < 5) {
         const nextInput = document.getElementById(`otp-${index + 1}`);
         if (nextInput) nextInput.focus();
+      }
+      
+      // Auto-submit if all digits filled
+      if (newOtp.every(d => d !== "") && value) {
+        setTimeout(() => handleVerify(), 100);
       }
     }
   };
@@ -106,62 +93,36 @@ export function OTPVerification() {
     setError(null);
 
     try {
-      const supabase = getSupabaseBrowserClient();
-
       // Verify OTP
-      const { data: accessRequest, error: requestError } = await supabase
+      const { data: request, error: verifyError } = await supabase
         .from('access_requests')
         .select('*')
-        .eq('doctor_id', pendingAccess.doctorId)
-        .eq('patient_id', pendingAccess.patientId)
+        .eq('id', requestId)
         .eq('otp_code', otpCode)
         .eq('status', 'pending')
         .gt('otp_expires_at', new Date().toISOString())
         .single();
 
-      if (requestError || !accessRequest) {
-        setError("Invalid or expired OTP. Please try again.");
-        return;
+      if (verifyError || !request) {
+        throw new Error("Invalid OTP. Please try again.");
       }
 
       // Mark OTP as used
       await supabase
         .from('access_requests')
-        .update({ 
-          status: 'approved',
-          otp_used_at: new Date().toISOString()
-        })
-        .eq('id', accessRequest.id);
+        .update({ status: 'approved', otp_used_at: new Date().toISOString() })
+        .eq('id', requestId);
 
-      // Check for existing active session
-      const { data: existingSession } = await supabase
-        .from('doctor_sessions')
-        .select('*')
-        .eq('patient_id', pendingAccess.patientId)
-        .is('terminated_at', null)
-        .single();
-
-      if (existingSession) {
-        // Terminate existing session
-        await supabase
-          .from('doctor_sessions')
-          .update({ 
-            terminated_at: new Date().toISOString(),
-            terminated_by: 'new_session'
-          })
-          .eq('id', existingSession.id);
-      }
-
-      // Create new session (expires in 30 minutes)
+      // Create session (30 minutes)
       const sessionExpiry = new Date();
       sessionExpiry.setMinutes(sessionExpiry.getMinutes() + 30);
 
       const { data: session, error: sessionError } = await supabase
         .from('doctor_sessions')
         .insert({
-          doctor_id: pendingAccess.doctorId,
-          patient_id: pendingAccess.patientId,
-          access_request_id: accessRequest.id,
+          doctor_id: request.doctor_id,
+          patient_id: patientId,
+          access_request_id: requestId,
           expires_at: sessionExpiry.toISOString(),
           last_activity_at: new Date().toISOString()
         })
@@ -170,33 +131,40 @@ export function OTPVerification() {
 
       if (sessionError) throw sessionError;
 
+      setSuccess(true);
+      
       // Store session info
-      sessionStorage.setItem('activeSession', JSON.stringify({
+      sessionStorage.setItem('activeDoctorSession', JSON.stringify({
         sessionId: session.id,
-        patientId: pendingAccess.patientId,
-        patientName: pendingAccess.patientName,
+        patientId: patientId,
+        patientName: patientName,
         expiresAt: sessionExpiry.toISOString()
       }));
 
-      // Clear pending access
-      sessionStorage.removeItem('pendingAccess');
-
-      // Redirect to patient view
-      router.push(`/doctor/access/session/${pendingAccess.patientId}`);
-
+      // Notify parent component
+      if (onVerify) {
+        onVerify({ sessionId: session.id, patientId });
+      }
+      
+      // Redirect to patient view after 1 second
+      setTimeout(() => {
+        router.push(`/doctor/view-patient/${patientId}?session=${session.id}`);
+      }, 1000);
+      
     } catch (error) {
-      console.error("Verification error:", error);
-      setError("Failed to verify OTP. Please try again.");
+      setError(error.message);
     } finally {
       setIsLoading(false);
     }
   };
 
-  if (!pendingAccess) {
+  if (success) {
     return (
       <Card>
-        <CardContent className="py-8">
-          <p className="text-center text-muted-foreground">Loading...</p>
+        <CardContent className="pt-6 text-center">
+          <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto mb-3" />
+          <h3 className="text-lg font-semibold">Access Granted!</h3>
+          <p className="text-sm text-muted-foreground">Redirecting to patient records...</p>
         </CardContent>
       </Card>
     );
@@ -205,9 +173,12 @@ export function OTPVerification() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Verify Access</CardTitle>
+        <CardTitle className="flex items-center gap-2">
+          <Key className="h-5 w-5 text-primary" />
+          Enter Verification Code
+        </CardTitle>
         <CardDescription>
-          Enter the 6-digit code sent to {pendingAccess.patientName}'s email
+          Please enter the 6-digit code sent to {patientName}'s email
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -221,6 +192,7 @@ export function OTPVerification() {
 
         {error && (
           <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
@@ -238,39 +210,28 @@ export function OTPVerification() {
               value={digit}
               onChange={(e) => handleOtpChange(index, e.target.value)}
               onKeyDown={(e) => handleKeyDown(index, e)}
-              className="w-12 h-12 text-center text-lg font-mono"
+              className="w-12 h-12 text-center text-xl font-mono"
               disabled={isLoading || timeLeft <= 0}
+              autoFocus={index === 0}
             />
           ))}
         </div>
 
-        <Button 
-          onClick={handleVerify} 
-          className="w-full"
-          disabled={isLoading || otp.join("").length !== 6 || timeLeft <= 0}
-        >
-          {isLoading ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Verifying...
-            </>
-          ) : (
-            <>
-              <CheckCircle className="mr-2 h-4 w-4" />
-              Verify & Access Records
-            </>
-          )}
-        </Button>
-
-        <p className="text-center text-sm text-muted-foreground">
-          Didn't receive the code?{" "}
-          <button 
-            onClick={() => router.push('/doctor/access')}
-            className="text-primary hover:underline"
-          >
-            Request again
-          </button>
-        </p>
+        <div className="flex gap-3">
+          <Button variant="outline" onClick={onCancel} className="flex-1">
+            Cancel
+          </Button>
+          <Button onClick={handleVerify} disabled={otp.some(d => d === "") || isLoading || timeLeft <= 0} className="flex-1">
+            {isLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Verifying...
+              </>
+            ) : (
+              "Verify & Access"
+            )}
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );

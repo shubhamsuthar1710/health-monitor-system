@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, Fingerprint, Mail, CheckCircle2, AlertCircle } from "lucide-react";
 
-export function PatientAccessRequest({ onSuccess, doctorId }) {
+export function PatientAccessRequest({ onSuccess }) {
   const [patientId, setPatientId] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -26,12 +26,37 @@ export function PatientAccessRequest({ onSuccess, doctorId }) {
     setIsLoading(true);
 
     try {
-      // 1. Validate patient ID format
+      // 1. Get current doctor
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) throw new Error("Please login again");
+
+      // 2. Get doctor_id from doctors table (required - foreign key constraint)
+      const { data: doctor, error: doctorError } = await supabase
+        .from('doctors')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (doctorError || !doctor) {
+        console.error("Doctor not found in doctors table:", doctorError);
+        throw new Error("Doctor record not found. Please complete your doctor registration first.");
+      }
+
+      const doctorId = doctor.id;
+
+      if (!doctorId) {
+        console.error("Doctor ID is null");
+        throw new Error("Doctor profile not found. Please complete your registration.");
+      }
+
+      console.log("Doctor ID:", doctorId);
+
+      // 3. Validate patient ID format
       if (!patientId || patientId.length !== 8 || !/^\d{8}$/.test(patientId)) {
         throw new Error("Please enter a valid 8-digit Patient ID");
       }
 
-      // 2. Find patient by ID
+      // 4. Find patient by ID
       const { data: patient, error: patientError } = await supabase
         .from('profiles')
         .select('id, email, full_name, date_of_birth, blood_type')
@@ -42,17 +67,18 @@ export function PatientAccessRequest({ onSuccess, doctorId }) {
         throw new Error("No patient found with this ID");
       }
 
-      // 3. Check rate limit (optional - add to database)
-      // 4. Generate OTP
+      console.log("Patient found:", patient);
+
+      // 5. Generate OTP
       const otp = Math.floor(100000 + Math.random() * 900000).toString();
       const expiresAt = new Date();
       expiresAt.setMinutes(expiresAt.getMinutes() + 20);
 
-      // 5. Store access request
+      // 6. Store access request
       const { data: request, error: requestError } = await supabase
         .from('access_requests')
         .insert({
-          doctor_id: doctorId,
+          doctor_id: doctorId,  // Use the UUID from doctors or profiles table
           patient_id: patient.id,
           patient_patient_id: patientId,
           otp_code: otp,
@@ -62,9 +88,14 @@ export function PatientAccessRequest({ onSuccess, doctorId }) {
         .select()
         .single();
 
-      if (requestError) throw requestError;
+      if (requestError) {
+        console.error("Request error:", requestError);
+        throw new Error(requestError.message);
+      }
 
-      // 6. Send OTP via email (call API route)
+      console.log("Access request created:", request);
+
+      // 7. Send OTP via email (API route)
       const emailResponse = await fetch('/api/doctor/send-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -77,10 +108,11 @@ export function PatientAccessRequest({ onSuccess, doctorId }) {
       });
 
       if (!emailResponse.ok) {
-        throw new Error("Failed to send OTP email");
+        const errorData = await emailResponse.json();
+        throw new Error(errorData.error || "Failed to send OTP email");
       }
 
-      // 7. Store request info in session storage for OTP verification
+      // 8. Store request info for OTP verification
       sessionStorage.setItem('pendingAccessRequest', JSON.stringify({
         requestId: request.id,
         patientId: patient.id,
