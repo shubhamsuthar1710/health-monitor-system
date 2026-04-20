@@ -30,15 +30,16 @@ export function PatientAccessRequest({ onSuccess }) {
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       if (userError || !user) throw new Error("Please login again");
 
-      // 2. Get doctor_id from doctors table (required - foreign key constraint)
+      // 2. Get doctor_id from profiles table (doctor info is stored in profiles)
       const { data: doctor, error: doctorError } = await supabase
-        .from('doctors')
+        .from('profiles')
         .select('id')
         .eq('user_id', user.id)
+        .eq('role', 'doctor')
         .single();
 
       if (doctorError || !doctor) {
-        console.error("Doctor not found in doctors table:", doctorError);
+        console.error("Doctor not found in profiles table:", doctorError);
         throw new Error("Doctor record not found. Please complete your doctor registration first.");
       }
 
