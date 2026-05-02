@@ -17,8 +17,14 @@ export async function POST(request) {
     // Add country code if not present (assuming Indian numbers)
     const finalPhone = cleanPhone.startsWith('91') ? cleanPhone : `91${cleanPhone}`;
 
-    // 2Factor API endpoint
-    const apiUrl = `https://2factor.in/API/R1/?module=SMS_OTP&apikey=${process.env.TWOFACTOR_API_KEY}&to=${finalPhone}&from=HEALTHTRK&template_id=${process.env.TWOFACTOR_TEMPLATE_ID}&msg=Your HealthTrack verification code is ${otp}. Valid for ${expiresIn || 20} minutes.`;
+    // Build 2Factor API URL
+    const baseUrl = `https://2factor.in/API/R1/?module=SMS_OTP&apikey=${process.env.TWOFACTOR_API_KEY}&to=${finalPhone}`;
+    const senderId = process.env.TWOFACTOR_SENDER || 'HEALTHTRK';
+    const templateId = process.env.TWOFACTOR_TEMPLATE_ID ? `&template_id=${process.env.TWOFACTOR_TEMPLATE_ID}` : '';
+    const message = `Your HealthTrack verification code is ${otp}. Valid for ${expiresIn || 20} minutes.`;
+    const apiUrl = `${baseUrl}&from=${senderId}${templateId}&msg=${encodeURIComponent(message)}`;
+
+    console.log("Sending SMS via 2Factor API...");
 
     const response = await fetch(apiUrl);
     const result = await response.json();

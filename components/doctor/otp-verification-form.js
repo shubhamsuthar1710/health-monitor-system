@@ -14,7 +14,7 @@ export function OTPVerification({ requestId, patientId, patientName, onVerify, o
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [timeLeft, setTimeLeft] = useState(1200); // 20 minutes in seconds
+  const [timeLeft, setTimeLeft] = useState(1200); // 20 minutes
   const [success, setSuccess] = useState(false);
   
   const router = useRouter();
@@ -38,7 +38,6 @@ export function OTPVerification({ requestId, patientId, patientName, onVerify, o
 
   const handleOtpChange = (index, value) => {
     if (value.length > 1) {
-      // Handle paste
       const pasted = value.slice(0, 6).split('');
       const newOtp = [...otp];
       pasted.forEach((digit, i) => {
@@ -48,7 +47,6 @@ export function OTPVerification({ requestId, patientId, patientName, onVerify, o
       });
       setOtp(newOtp);
       
-      // Auto-submit if all digits filled
       if (pasted.length === 6 && pasted.every(d => /^\d$/.test(d))) {
         setTimeout(() => handleVerify(), 100);
       }
@@ -57,13 +55,11 @@ export function OTPVerification({ requestId, patientId, patientName, onVerify, o
       newOtp[index] = value;
       setOtp(newOtp);
       
-      // Auto-focus next input
       if (value && index < 5) {
         const nextInput = document.getElementById(`otp-${index + 1}`);
         if (nextInput) nextInput.focus();
       }
       
-      // Auto-submit if all digits filled
       if (newOtp.every(d => d !== "") && value) {
         setTimeout(() => handleVerify(), 100);
       }
@@ -93,7 +89,7 @@ export function OTPVerification({ requestId, patientId, patientName, onVerify, o
     setError(null);
 
     try {
-      // Verify OTP
+      // Verify OTP directly
       const { data: request, error: verifyError } = await supabase
         .from('access_requests')
         .select('*')
@@ -107,13 +103,13 @@ export function OTPVerification({ requestId, patientId, patientName, onVerify, o
         throw new Error("Invalid OTP. Please try again.");
       }
 
-      // Mark OTP as used
+      // Mark as used
       await supabase
         .from('access_requests')
         .update({ status: 'approved', otp_used_at: new Date().toISOString() })
         .eq('id', requestId);
 
-      // Create session (30 minutes)
+      // Create session
       const sessionExpiry = new Date();
       sessionExpiry.setMinutes(sessionExpiry.getMinutes() + 30);
 
@@ -133,20 +129,10 @@ export function OTPVerification({ requestId, patientId, patientName, onVerify, o
 
       setSuccess(true);
       
-      // Store session info
-      sessionStorage.setItem('activeDoctorSession', JSON.stringify({
-        sessionId: session.id,
-        patientId: patientId,
-        patientName: patientName,
-        expiresAt: sessionExpiry.toISOString()
-      }));
-
-      // Notify parent component
       if (onVerify) {
         onVerify({ sessionId: session.id, patientId });
       }
       
-      // Redirect to patient view after 1 second
       setTimeout(() => {
         router.push(`/doctor/view-patient/${patientId}?session=${session.id}`);
       }, 1000);
@@ -178,14 +164,13 @@ export function OTPVerification({ requestId, patientId, patientName, onVerify, o
           Enter Verification Code
         </CardTitle>
         <CardDescription>
-          Please enter the 6-digit code sent to {patientName}'s email
+          Please enter the 6-digit code sent to the patient
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Timer */}
         <div className="flex items-center justify-center gap-2 text-sm">
           <Clock className="h-4 w-4 text-muted-foreground" />
-          <span className={timeLeft < 60 ? "text-destructive font-medium" : ""}>
+          <span className={timeLeft < 60 ? "text-red-500 font-medium" : ""}>
             Code expires in {formatTime(timeLeft)}
           </span>
         </div>
@@ -197,7 +182,6 @@ export function OTPVerification({ requestId, patientId, patientName, onVerify, o
           </Alert>
         )}
 
-        {/* OTP Input */}
         <div className="flex justify-center gap-2">
           {otp.map((digit, index) => (
             <Input
@@ -213,6 +197,7 @@ export function OTPVerification({ requestId, patientId, patientName, onVerify, o
               className="w-12 h-12 text-center text-xl font-mono"
               disabled={isLoading || timeLeft <= 0}
               autoFocus={index === 0}
+              required
             />
           ))}
         </div>
@@ -221,7 +206,11 @@ export function OTPVerification({ requestId, patientId, patientName, onVerify, o
           <Button variant="outline" onClick={onCancel} className="flex-1">
             Cancel
           </Button>
-          <Button onClick={handleVerify} disabled={otp.some(d => d === "") || isLoading || timeLeft <= 0} className="flex-1">
+          <Button 
+            onClick={handleVerify} 
+            disabled={otp.some(d => d === "") || isLoading || timeLeft <= 0} 
+            className="flex-1"
+          >
             {isLoading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

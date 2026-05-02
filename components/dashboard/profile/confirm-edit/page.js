@@ -112,7 +112,36 @@ export default function ConfirmEditPage() {
     verifyToken();
   }, [token]);
 
+  const validateForm = () => {
+    if (!profileForm.full_name.trim()) {
+      setError("Full name is required");
+      return false;
+    }
+    if (!profileForm.date_of_birth) {
+      setError("Date of birth is required");
+      return false;
+    }
+    if (!profileForm.blood_type) {
+      setError("Blood type is required");
+      return false;
+    }
+    if (!profileForm.height_cm) {
+      setError("Height is required");
+      return false;
+    }
+    if (!profileForm.weight_kg) {
+      setError("Weight is required");
+      return false;
+    }
+    return true;
+  };
+
   const handleSaveChanges = async () => {
+    // Validate before saving
+    if (!validateForm()) {
+      return;
+    }
+    
     setIsSaving(true);
     setError(null);
 
@@ -221,6 +250,7 @@ export default function ConfirmEditPage() {
             <CardTitle>Edit Profile</CardTitle>
             <CardDescription>
               Your email has been verified. You can now update your profile information.
+              <span className="text-red-500 text-sm block mt-2">* All fields are required</span>
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -231,31 +261,43 @@ export default function ConfirmEditPage() {
             )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Full Name - REQUIRED */}
               <div className="space-y-2">
-                <Label htmlFor="full_name">Full Name</Label>
+                <Label htmlFor="full_name">
+                  Full Name <span className="text-red-500">*</span>
+                </Label>
                 <Input
                   id="full_name"
                   value={profileForm.full_name}
                   onChange={(e) => setProfileForm({ ...profileForm, full_name: e.target.value })}
                   placeholder="John Doe"
+                  required
                 />
               </div>
 
+              {/* Date of Birth - REQUIRED */}
               <div className="space-y-2">
-                <Label htmlFor="dob">Date of Birth</Label>
+                <Label htmlFor="dob">
+                  Date of Birth <span className="text-red-500">*</span>
+                </Label>
                 <Input
                   id="dob"
                   type="date"
                   value={profileForm.date_of_birth}
                   onChange={(e) => setProfileForm({ ...profileForm, date_of_birth: e.target.value })}
+                  required
                 />
               </div>
 
+              {/* Blood Type - REQUIRED */}
               <div className="space-y-2">
-                <Label htmlFor="blood_type">Blood Type</Label>
+                <Label htmlFor="blood_type">
+                  Blood Type <span className="text-red-500">*</span>
+                </Label>
                 <Select
                   value={profileForm.blood_type}
                   onValueChange={(value) => setProfileForm({ ...profileForm, blood_type: value })}
+                  required
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select blood type" />
@@ -268,25 +310,37 @@ export default function ConfirmEditPage() {
                 </Select>
               </div>
 
+              {/* Height - REQUIRED */}
               <div className="space-y-2">
-                <Label htmlFor="height">Height (cm)</Label>
+                <Label htmlFor="height">
+                  Height (cm) <span className="text-red-500">*</span>
+                </Label>
                 <Input
                   id="height"
                   type="number"
                   value={profileForm.height_cm}
                   onChange={(e) => setProfileForm({ ...profileForm, height_cm: e.target.value })}
                   placeholder="175"
+                  required
+                  min={50}
+                  max={300}
                 />
               </div>
 
+              {/* Weight - REQUIRED */}
               <div className="space-y-2">
-                <Label htmlFor="weight">Weight (kg)</Label>
+                <Label htmlFor="weight">
+                  Weight (kg) <span className="text-red-500">*</span>
+                </Label>
                 <Input
                   id="weight"
                   type="number"
                   value={profileForm.weight_kg}
                   onChange={(e) => setProfileForm({ ...profileForm, weight_kg: e.target.value })}
                   placeholder="70"
+                  required
+                  min={10}
+                  max={500}
                 />
               </div>
             </div>
