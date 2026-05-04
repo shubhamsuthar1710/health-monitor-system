@@ -9,6 +9,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, Fingerprint, Mail, CheckCircle2, AlertCircle, Smartphone, Send } from "lucide-react";
 
+function generateOTP() {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
 async function hashOTP(otp) {
   const encoder = new TextEncoder();
   const data = encoder.encode(otp);
@@ -85,7 +89,7 @@ export function PatientAccessRequest({ onSuccess }) {
       }
 
       // 6. Generate OTP
-      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      const otp = generateOTP();
       const expiresAt = new Date();
       expiresAt.setMinutes(expiresAt.getMinutes() + 20);
 
