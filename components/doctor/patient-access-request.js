@@ -90,6 +90,7 @@ export function PatientAccessRequest({ onSuccess }) {
 
       // 6. Generate OTP
       const otp = generateOTP();
+      const otpHash = await hashOTP(otp);
       const expiresAt = new Date();
       expiresAt.setMinutes(expiresAt.getMinutes() + 20);
 
@@ -100,7 +101,7 @@ export function PatientAccessRequest({ onSuccess }) {
           doctor_id: doctorId,
           patient_id: patient.id,
           patient_patient_id: trimmedPatientId,
-          otp_code: otp,
+          otp_code: otpHash,
           otp_expires_at: expiresAt.toISOString(),
           status: 'pending'
         })
@@ -226,116 +227,104 @@ export function PatientAccessRequest({ onSuccess }) {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Fingerprint className="h-5 w-5 text-primary" />
+    <Card className="mt-auto">
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <Fingerprint className="h-4 w-4 text-primary" />
           Access Patient Records
         </CardTitle>
-        <CardDescription>
+        <CardDescription className="text-xs">
           Enter the patient's 8-digit ID to request access
         </CardDescription>
       </CardHeader>
-      <CardContent>
-        <form onSubmit={handleRequestAccess} className="space-y-4">
+      <CardContent className="space-y-3 pt-0">
+        <form onSubmit={handleRequestAccess} className="space-y-3">
           {error && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
+            <Alert variant="destructive" className="py-1">
+              <AlertCircle className="h-3 w-3" />
+              <AlertDescription className="text-xs">{error}</AlertDescription>
             </Alert>
           )}
           
           {success && (
-            <Alert className="bg-green-50 border-green-200">
-              <CheckCircle2 className="h-4 w-4 text-green-600" />
-              <AlertDescription className="text-green-700">{success}</AlertDescription>
+            <Alert className="bg-green-50 border-green-200 py-1">
+              <CheckCircle2 className="h-3 w-3 text-green-600" />
+              <AlertDescription className="text-xs text-green-700">{success}</AlertDescription>
             </Alert>
           )}
 
           {/* Patient ID Input */}
-          <div className="space-y-2">
-            <Label htmlFor="patientId">Patient ID <span className="text-red-500">*</span></Label>
+          <div className="space-y-1">
+            <Label htmlFor="patientId" className="text-xs">Patient ID <span className="text-red-500">*</span></Label>
             <div className="relative">
-              <Fingerprint className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Fingerprint className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
               <Input
                 id="patientId"
-                placeholder="Enter 8-digit ID (e.g., 10000001)"
+                placeholder="8-digit ID"
                 value={patientId}
                 onChange={(e) => setPatientId(e.target.value.replace(/\D/g, '').slice(0, 8))}
                 maxLength={8}
-                className="pl-9 font-mono text-lg"
+                className="pl-7 font-mono text-sm h-8"
                 required
                 disabled={isLoading}
               />
             </div>
-            <p className="text-xs text-muted-foreground">
-              The patient ID is displayed on the patient's profile card
-            </p>
           </div>
 
           {/* Delivery Method Selection */}
-          <div className="space-y-2">
-            <Label>Delivery Method</Label>
-            <div className="flex gap-4">
-              <label className="flex items-center gap-2 cursor-pointer">
+          <div className="space-y-1">
+            <Label className="text-xs">Delivery Method</Label>
+            <div className="flex gap-3">
+              <label className="flex items-center gap-1 cursor-pointer text-xs">
                 <input
                   type="radio"
                   name="deliveryMethod"
                   value="email"
                   checked={deliveryMethod === "email"}
                   onChange={(e) => setDeliveryMethod(e.target.value)}
-                  className="w-4 h-4"
+                  className="w-3 h-3"
                   disabled={isLoading}
                 />
-                <Mail className="h-4 w-4" />
-                <span className="text-sm">Email</span>
+                <Mail className="h-3 w-3" />
+                <span>Email</span>
               </label>
-              <label className="flex items-center gap-2 cursor-pointer">
+              <label className="flex items-center gap-1 cursor-pointer text-xs">
                 <input
                   type="radio"
                   name="deliveryMethod"
                   value="sms"
                   checked={deliveryMethod === "sms"}
                   onChange={(e) => setDeliveryMethod(e.target.value)}
-                  className="w-4 h-4"
+                  className="w-3 h-3"
                   disabled={isLoading}
                 />
-                <Smartphone className="h-4 w-4" />
-                <span className="text-sm">SMS (Faster)</span>
+                <Smartphone className="h-3 w-3" />
+                <span>SMS</span>
               </label>
             </div>
-            {deliveryMethod === "sms" && (
-              <p className="text-xs text-muted-foreground">
-                Patient must have a verified phone number in their profile
-              </p>
-            )}
           </div>
 
           {patientInfo && (
-            <div className="bg-muted/50 p-3 rounded-lg space-y-1">
-              <p className="text-sm font-medium">Patient Found:</p>
-              <p className="text-sm">{patientInfo.full_name}</p>
-              <p className="text-xs text-muted-foreground">{patientInfo.email}</p>
-              {deliveryMethod === "sms" && patientInfo.phone && (
-                <p className="text-xs text-muted-foreground">SMS to: {patientInfo.phone}</p>
-              )}
+            <div className="bg-muted/50 p-2 rounded-lg text-xs">
+              <p className="font-medium">{patientInfo.full_name}</p>
+              <p className="text-muted-foreground text-xs">{patientInfo.email}</p>
             </div>
           )}
 
-          <Button type="submit" className="w-full" disabled={isLoading}>
+          <Button type="submit" className="w-full text-sm py-1 h-8" disabled={isLoading}>
             {isLoading ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Sending OTP...
+                <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                Sending...
               </>
             ) : (
               <>
                 {deliveryMethod === "sms" ? (
-                  <Send className="mr-2 h-4 w-4" />
+                  <Send className="mr-1 h-3 w-3" />
                 ) : (
-                  <Mail className="mr-2 h-4 w-4" />
+                  <Mail className="mr-1 h-3 w-3" />
                 )}
-                Request Access & Send OTP via {deliveryMethod.toUpperCase()}
+                Request Access
               </>
             )}
           </Button>

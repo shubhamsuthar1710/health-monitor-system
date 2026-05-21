@@ -89,12 +89,19 @@ export function OTPVerification({ requestId, patientId, patientName, onVerify, o
     setError(null);
 
     try {
-      // Verify OTP directly
+      // Hash the input OTP before verification
+      const encoder = new TextEncoder();
+      const data = encoder.encode(otpCode);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      const otpHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+      // Verify OTP using hashed value
       const { data: request, error: verifyError } = await supabase
         .from('access_requests')
         .select('*')
         .eq('id', requestId)
-        .eq('otp_code', otpCode)
+        .eq('otp_code', otpHash)
         .eq('status', 'pending')
         .gt('otp_expires_at', new Date().toISOString())
         .single();
@@ -147,10 +154,10 @@ export function OTPVerification({ requestId, patientId, patientName, onVerify, o
   if (success) {
     return (
       <Card>
-        <CardContent className="pt-6 text-center">
-          <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto mb-3" />
-          <h3 className="text-lg font-semibold">Access Granted!</h3>
-          <p className="text-sm text-muted-foreground">Redirecting to patient records...</p>
+        <CardContent className="pt-4 text-center">
+          <CheckCircle2 className="h-8 w-8 text-green-500 mx-auto mb-2" />
+          <h3 className="text-sm font-semibold">Access Granted!</h3>
+          <p className="text-xs text-muted-foreground">Redirecting...</p>
         </CardContent>
       </Card>
     );
@@ -158,31 +165,31 @@ export function OTPVerification({ requestId, patientId, patientName, onVerify, o
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Key className="h-5 w-5 text-primary" />
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <Key className="h-4 w-4 text-primary" />
           Enter Verification Code
         </CardTitle>
-        <CardDescription>
+        <CardDescription className="text-xs">
           Please enter the 6-digit code sent to the patient
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="flex items-center justify-center gap-2 text-sm">
-          <Clock className="h-4 w-4 text-muted-foreground" />
+      <CardContent className="space-y-3 pt-0">
+        <div className="flex items-center justify-center gap-2 text-xs">
+          <Clock className="h-3 w-3 text-muted-foreground" />
           <span className={timeLeft < 60 ? "text-red-500 font-medium" : ""}>
             Code expires in {formatTime(timeLeft)}
           </span>
         </div>
 
         {error && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{error}</AlertDescription>
+          <Alert variant="destructive" className="py-2">
+            <AlertCircle className="h-3 w-3" />
+            <AlertDescription className="text-xs">{error}</AlertDescription>
           </Alert>
         )}
 
-        <div className="flex justify-center gap-2">
+        <div className="flex justify-center gap-1">
           {otp.map((digit, index) => (
             <Input
               key={index}
@@ -194,7 +201,7 @@ export function OTPVerification({ requestId, patientId, patientName, onVerify, o
               value={digit}
               onChange={(e) => handleOtpChange(index, e.target.value)}
               onKeyDown={(e) => handleKeyDown(index, e)}
-              className="w-12 h-12 text-center text-xl font-mono"
+              className="w-10 h-10 text-center text-lg font-mono"
               disabled={isLoading || timeLeft <= 0}
               autoFocus={index === 0}
               required
@@ -202,22 +209,22 @@ export function OTPVerification({ requestId, patientId, patientName, onVerify, o
           ))}
         </div>
 
-        <div className="flex gap-3">
-          <Button variant="outline" onClick={onCancel} className="flex-1">
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={onCancel} className="flex-1 text-sm py-1 h-8">
             Cancel
           </Button>
           <Button 
             onClick={handleVerify} 
             disabled={otp.some(d => d === "") || isLoading || timeLeft <= 0} 
-            className="flex-1"
+            className="flex-1 text-sm py-1 h-8"
           >
             {isLoading ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="mr-1 h-3 w-3 animate-spin" />
                 Verifying...
               </>
             ) : (
-              "Verify & Access"
+              "Verify"
             )}
           </Button>
         </div>

@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { PatientFullView } from "@/components/doctor/patient-full-view";
 
 export default async function ViewPatientPage({ params }) {
-  const { patientId } = params;
+  const { patientId } = await params;
   
   const cookieStore = await cookies();
   const supabase = createServerClient(
