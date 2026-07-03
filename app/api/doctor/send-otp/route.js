@@ -5,8 +5,9 @@ function validateEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
-const SENDER_EMAIL = 'onboarding@resend.dev';
-const SENDER_NAME = 'HealthTrack';
+// ✅ FIXED: Use environment variable with fallback to your verified domain
+const SENDER_EMAIL = process.env.RESEND_SENDER_EMAIL || 'otp@healthtrack.cfd';
+const SENDER_NAME = process.env.RESEND_SENDER_NAME || 'HealthTrack';
 const fromAddress = `${SENDER_NAME} <${SENDER_EMAIL}>`;
 
 const emailHtmlTemplate = ({ patientName, otp, expiresIn }) => `
@@ -57,7 +58,7 @@ const emailHtmlTemplate = ({ patientName, otp, expiresIn }) => `
                     <td align="center">
                       <p style="margin: 0 0 12px 0; color: #64748b; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">Your Verification Code</p>
                       <div style="font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace; font-size: 36px; font-weight: 700; letter-spacing: 12px; color: #0f172a;">${otp}</div>
-                    </td>
+                    </td
                   </tr>
                 </table>
                 
@@ -98,7 +99,7 @@ const emailHtmlTemplate = ({ patientName, otp, expiresIn }) => `
             </tr>
           </table>
         </td>
-      </tr>
+      </table>
     </table>
   </body>
 </html>
@@ -175,6 +176,8 @@ export async function POST(request) {
       );
     }
 
+    console.log('[send-otp] Using sender email:', SENDER_EMAIL);
+
     // --- Initialize Resend ---
     const resend = new Resend(apiKey);
 
@@ -200,24 +203,6 @@ export async function POST(request) {
         statusCode: error.statusCode || 'N/A',
         fullError: JSON.stringify(error, Object.getOwnPropertyNames(error)),
       });
-
-      // Detect common Resend sandbox restriction
-      const isSandboxError =
-        (error.message && error.message.toLowerCase().includes('sandbox')) ||
-        (error.message && error.message.toLowerCase().includes('onboarding@resend.dev')) ||
-        (error.message && error.message.toLowerCase().includes('verify your domain'));
-
-      if (isSandboxError) {
-        console.error('[send-otp] SANDBOX RESTRICTION DETECTED: Resend sandbox (onboarding@resend.dev) only delivers to your verified account email. To send to arbitrary recipients, add and verify a custom domain in Resend dashboard.');
-      }
-
-      // Check for invalid sender address
-      const isSenderError =
-        error.message && error.message.toLowerCase().includes('sender');
-
-      if (isSenderError) {
-        console.error('[send-otp] SENDER ERROR: The from address may not be verified or is invalid:', fromAddress);
-      }
 
       return NextResponse.json(
         {

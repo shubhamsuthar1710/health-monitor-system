@@ -98,10 +98,9 @@ export async function GET(request) {
           is_profile_complete: false
         });
       } else if (profile) {
-        // Fix role if cookie says doctor
-        if (signupRoleCookie === 'doctor' && profile.role !== 'doctor') {
+        if (profile.role !== finalRole) {
           await supabase.from('profiles').update({
-            role: 'doctor',
+            role: finalRole,
             is_profile_complete: false
           }).eq('id', user.id);
         }
@@ -192,11 +191,10 @@ export async function GET(request) {
           is_profile_complete: false
         });
       } else if (profile) {
-        // ALWAYS fix role to doctor if cookie says doctor
-        if (signupRoleCookie === 'doctor' && profile.role !== 'doctor') {
-          console.log('FORCE updating role from', profile.role, 'to doctor');
+        if (profile.role !== finalRole) {
+          console.log('Updating role from', profile.role, 'to', finalRole);
           await supabase.from('profiles').update({
-            role: 'doctor',
+            role: finalRole,
             is_profile_complete: false
           }).eq('id', user.id);
         }

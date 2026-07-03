@@ -45,9 +45,21 @@ const entryTypeLabels = {
   weight: "Weight",
 };
 
+const TEMP_MIN = 93;
+const TEMP_MAX = 103;
+
 function formatEntryValue(entry) {
   if (entry.value === null) return "N/A";
   return `${entry.value} ${entry.unit || ""}`.trim();
+}
+
+function getTempWarning(entry) {
+  if (entry.entry_type !== "temperature") return null;
+  const val = parseFloat(entry.value);
+  if (isNaN(val)) return null;
+  if (val > TEMP_MAX) return "high";
+  if (val < TEMP_MIN) return "low";
+  return null;
 }
 
 function useFormattedDate(dateString) {
@@ -235,7 +247,15 @@ export function DashboardContent({
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="text-lg font-semibold">{formatEntryValue(entry)}</p>
+                        <div className="flex items-center gap-2 justify-end">
+                          <p className="text-lg font-semibold">{formatEntryValue(entry)}</p>
+                          {getTempWarning(entry) && (
+                            <span className="flex items-center gap-1 text-xs font-medium text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full">
+                              <AlertTriangle className="h-3 w-3" />
+                              {getTempWarning(entry) === "high" ? "High" : "Low"}
+                            </span>
+                          )}
+                        </div>
                         {entry.notes && (
                           <p className="text-xs text-muted-foreground truncate max-w-[120px]">
                             {entry.notes}

@@ -57,13 +57,15 @@ export async function POST(request) {
       );
     }
 
+    const fromAddress = `${process.env.RESEND_SENDER_NAME || 'HealthTrack'} <${process.env.RESEND_SENDER_EMAIL || 'onboarding@resend.dev'}>`;
+
     console.log('[send-edit-confirmation] Sending email via Resend:', {
       to: email,
-      from: 'HealthTrack <onboarding@resend.dev>',
+      from: fromAddress,
     });
 
     const { data, error } = await resend.emails.send({
-      from: 'HealthTrack <onboarding@resend.dev>',
+      from: fromAddress,
       to: email,
       subject: 'Confirm Your Profile Edit',
       html: getEmailHtml({ fullName, editUrl }),

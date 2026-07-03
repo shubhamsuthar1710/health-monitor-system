@@ -58,6 +58,30 @@ function getEntryLabel(entryType) {
   }
 }
 
+const TEMP_MIN = 93;
+const TEMP_MAX = 103;
+
+function getTempWarning(entry) {
+  if (entry.entry_type !== 'temperature') return null;
+  const val = parseFloat(entry.value);
+  if (isNaN(val)) return null;
+  if (val > TEMP_MAX) return 'high';
+  if (val < TEMP_MIN) return 'low';
+  return null;
+}
+
+function TempWarningBadge({ entry }) {
+  const level = getTempWarning(entry);
+  if (!level) return null;
+  const label = level === 'high' ? 'High' : 'Low';
+  return (
+    <span className="text-xs font-medium text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full flex items-center gap-1">
+      <AlertTriangle className="h-3 w-3" />
+      {label}
+    </span>
+  );
+}
+
 export function PatientFullView({ patientId, sessionId, patientData, doctorName, sessionExpiresAt }) {
   const [timeLeft, setTimeLeft] = useState(0);
   const [activeTab, setActiveTab] = useState("overview");
@@ -234,7 +258,10 @@ export function PatientFullView({ patientId, sessionId, patientData, doctorName,
                                 <p className="text-xs text-muted-foreground">{formatDateTime(entry.recorded_at)}</p>
                               </div>
                             </div>
-                            <p className="font-semibold">{entry.value} {entry.unit}</p>
+                            <div className="flex items-center gap-2">
+                              <p className="font-semibold">{entry.value} {entry.unit}</p>
+                              <TempWarningBadge entry={entry} />
+                            </div>
                           </div>
                         );
                       })}
@@ -270,7 +297,10 @@ export function PatientFullView({ patientId, sessionId, patientData, doctorName,
                               {entry.notes && <p className="text-xs text-muted-foreground mt-1">{entry.notes}</p>}
                             </div>
                           </div>
-                          <p className="text-xl font-bold">{entry.value} {entry.unit}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="text-xl font-bold">{entry.value} {entry.unit}</p>
+                            <TempWarningBadge entry={entry} />
+                          </div>
                         </div>
                       );
                     })}
