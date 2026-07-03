@@ -285,9 +285,7 @@ export default async function HomePage() {
               <span className="font-medium">HealthTrack</span>
             </div>
             <div className="flex items-center gap-4">
-              <Link href="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
-              <Link href="/terms" className="hover:text-foreground transition-colors">Terms</Link>
-              <span>© 2024</span>
+              <span>shubham suthar</span>
             </div>
           </div>
         </div>
